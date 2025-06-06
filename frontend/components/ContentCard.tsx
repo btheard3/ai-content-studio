@@ -1,134 +1,32 @@
 import React from "react";
-import { motion } from "framer-motion";
-import {
-	FileText,
-	MessageSquare,
-	Mail,
-	Video,
-	FileBarChart2,
-	ChevronRight,
-} from "lucide-react";
-import { ContentItem, WorkflowStage } from "../types";
-import { useAgents } from "../context/AgentContext";
+import { ContentItem } from "../types";
+import { FaFileAlt } from "react-icons/fa";
 
-interface ContentCardProps {
+interface Props {
 	content: ContentItem;
+	onAdvance: () => void;
 }
 
-const ContentCard: React.FC<ContentCardProps> = ({ content }) => {
-	const { agents, advanceContent } = useAgents();
-
-	// Get the assigned agent
-	const assignedAgent = agents.find((agent) => agent.id === content.assignedTo);
-
-	// Get the right icon based on content type
-	const getContentIcon = () => {
-		switch (content.contentType) {
-			case "blog":
-				return <FileText className="w-5 h-5" />;
-			case "social":
-				return <MessageSquare className="w-5 h-5" />;
-			case "email":
-				return <Mail className="w-5 h-5" />;
-			case "video":
-				return <Video className="w-5 h-5" />;
-			case "whitepaper":
-				return <FileBarChart2 className="w-5 h-5" />;
-			default:
-				return <FileText className="w-5 h-5" />;
-		}
-	};
-
-	// Get the stage color
-	const getStageColor = () => {
-		switch (content.stage) {
-			case "PLANNING":
-				return "bg-primary-100 text-primary-800";
-			case "RESEARCH":
-				return "bg-secondary-100 text-secondary-800";
-			case "WRITING":
-				return "bg-accent-100 text-accent-800";
-			case "REVIEW":
-				return "bg-success-100 text-success-800";
-			case "PUBLISHING":
-				return "bg-warning-100 text-warning-800";
-			case "PUBLISHED":
-				return "bg-gray-100 text-gray-800";
-			case "ARCHIVED":
-				return "bg-gray-100 text-gray-500";
-			default:
-				return "bg-gray-100 text-gray-800";
-		}
-	};
-
-	// Format date
-	const formatDate = (dateString: string) => {
-		const date = new Date(dateString);
-		return new Intl.DateTimeFormat("en-US", {
-			month: "short",
-			day: "numeric",
-			year: "numeric",
-		}).format(date);
-	};
-
+const ContentCard: React.FC<Props> = ({ content, onAdvance }) => {
 	return (
-		<motion.div
-			className="card card-hover"
-			whileHover={{ y: -3 }}
-			initial={{ opacity: 0, y: 20 }}
-			animate={{ opacity: 1, y: 0 }}
-			transition={{ duration: 0.3 }}>
-			<div className="flex items-start justify-between mb-3">
-				<div className="flex items-center space-x-2">
-					<div className="p-2 bg-gray-100 rounded-lg">{getContentIcon()}</div>
-					<div>
-						<h3 className="font-medium text-gray-900">{content.title}</h3>
-						<span className="text-sm text-gray-500 capitalize">
-							{content.contentType}
-						</span>
-					</div>
-				</div>
-				<span
-					className={`text-xs px-2 py-1 rounded-full capitalize ${getStageColor()}`}>
-					{content.stage}
-				</span>
+		<div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+			<div className="flex items-center gap-3 text-gray-700 mb-2">
+				<FaFileAlt className="text-gray-400" />
+				<h3 className="font-semibold">{content.title}</h3>
 			</div>
-
-			<p className="text-gray-600 text-sm mb-4 line-clamp-2">
-				{content.description}
-			</p>
-
-			<div className="flex flex-wrap gap-2 mb-4">
-				{content.tags.map((tag, index) => (
-					<span
-						key={index}
-						className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
-						{tag}
-					</span>
-				))}
+			<p className="text-sm text-gray-500">{content.description}</p>
+			<div className="mt-2 text-xs text-gray-400">
+				{content.type} • {content.contentType}
 			</div>
-
-			<div className="flex items-center justify-between mt-auto pt-3 border-t border-gray-100">
-				<div className="flex items-center space-x-2">
-					<div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
-						<span className="text-xs font-medium">
-							{assignedAgent?.name.charAt(0) || "?"}
-						</span>
-					</div>
-					<span className="text-xs text-gray-500">
-						{formatDate(content.createdAt)}
-					</span>
-				</div>
-
-				{content.stage !== "PUBLISHED" && content.stage !== "ARCHIVED" && (
-					<button
-						className="text-xs text-primary-600 flex items-center hover:text-primary-700"
-						onClick={() => advanceContent(content.id)}>
-						Advance <ChevronRight className="w-3 h-3 ml-1" />
-					</button>
-				)}
+			<div className="mt-2 flex justify-between items-center text-sm text-gray-600">
+				<span>{content.stage}</span>
+				<button
+					onClick={onAdvance}
+					className="text-sm text-blue-600 hover:underline">
+					Advance →
+				</button>
 			</div>
-		</motion.div>
+		</div>
 	);
 };
 
