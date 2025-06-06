@@ -1,6 +1,19 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, {
+	createContext,
+	useContext,
+	useState,
+	useEffect,
+	ReactNode,
+} from "react";
+
 import { Agent, AgentStatus, ContentItem, WorkflowStage } from "../types";
-import { initialAgents, mockContentItems } from "../data/mockData";
+
+import {
+	initialAgents,
+	mockContentItems,
+	mockActivityLogs,
+	mockPerformanceMetrics,
+} from "../data/mockData";
 
 interface AgentContextType {
 	agents: Agent[];
@@ -22,7 +35,7 @@ export const useAgents = () => {
 	return context;
 };
 
-export const AgentProvider: React.FC<{ children: React.ReactNode }> = ({
+export const AgentProvider: React.FC<{ children: ReactNode }> = ({
 	children,
 }) => {
 	const [agents, setAgents] = useState<Agent[]>(initialAgents);
@@ -32,47 +45,27 @@ export const AgentProvider: React.FC<{ children: React.ReactNode }> = ({
 	const [completedItems, setCompletedItems] = useState<number>(0);
 
 	useEffect(() => {
-		// Calculate active workflows
+		// Simulate calculated workflow data
 		const active = contentItems.filter(
 			(item) =>
 				item.stage !== WorkflowStage.PUBLISHED &&
 				item.stage !== WorkflowStage.ARCHIVED
 		).length;
-		setActiveWorkflows(active);
 
-		// Calculate completed items
 		const completed = contentItems.filter(
-			(item) => item.stage === WorkflowStage.PUBLISHED
+			(item) =>
+				item.stage === WorkflowStage.PUBLISHED ||
+				item.stage === WorkflowStage.ARCHIVED
 		).length;
+
+		setActiveWorkflows(active);
 		setCompletedItems(completed);
-
-		// Simulate agent status changes
-		const interval = setInterval(() => {
-			setAgents((prevAgents) => {
-				return prevAgents.map((agent) => {
-					// Random status change for demo purposes
-					if (Math.random() > 0.7) {
-						const statusOptions: AgentStatus[] = [
-							"active",
-							"idle",
-							"processing",
-						];
-						const newStatus =
-							statusOptions[Math.floor(Math.random() * statusOptions.length)];
-						return { ...agent, status: newStatus };
-					}
-					return agent;
-				});
-			});
-		}, 8000);
-
-		return () => clearInterval(interval);
 	}, [contentItems]);
 
 	const updateAgentStatus = (id: string, status: AgentStatus) => {
-		setAgents((prevAgents) =>
-			prevAgents.map((agent) =>
-				agent.id === id ? { ...agent, status } : agent
+		setAgents((prev) =>
+			prev.map((agent, idx) =>
+				idx.toString() === id ? { ...agent, status } : agent
 			)
 		);
 	};
@@ -80,15 +73,26 @@ export const AgentProvider: React.FC<{ children: React.ReactNode }> = ({
 	const advanceContent = (id: string) => {
 		setContentItems((prevItems) =>
 			prevItems.map((item) => {
-				if (item.id === id) {
-					const currentStageIndex = Object.values(WorkflowStage).indexOf(
-						item.stage
-					);
-					const nextStage =
-						Object.values(WorkflowStage)[currentStageIndex + 1] || item.stage;
-					return { ...item, stage: nextStage };
-				}
-				return item;
+				if (item.id !== id) return item;
+
+				const stageOrder = [
+					WorkflowStage.PLANNING,
+					WorkflowStage.RESEARCH,
+					WorkflowStage.WRITING,
+					WorkflowStage.REVIEW,
+					WorkflowStage.PUBLISHED,
+					WorkflowStage.ARCHIVED,
+				];
+				const nextStageIndex = stageOrder.indexOf(item.stage) + 1;
+				const nextStage =
+					nextStageIndex < stageOrder.length
+						? stageOrder[nextStageIndex]
+						: WorkflowStage.ARCHIVED;
+
+				return {
+					...item,
+					stage: nextStage,
+				};
 			})
 		);
 	};
@@ -97,18 +101,14 @@ export const AgentProvider: React.FC<{ children: React.ReactNode }> = ({
 		const newItem: ContentItem = {
 			id: `content-${Date.now()}`,
 			title: item.title || "New Content",
-			description: item.description || "",
-			stage: WorkflowStage.PLANNING,
-			createdAt: new Date().toISOString(),
-			assignedTo: item.assignedTo || agents[0].id,
-			contentType: item.contentType || "blog",
 			type: item.type || "article",
+			contentType: item.contentType || "blog",
 			tags: item.tags || [],
-			metrics: {
-				views: 0,
-				engagement: 0,
-				conversion: 0,
-			},
+			metrics: item.metrics || { views: 0, engagement: 0, conversion: 0 },
+			stage: WorkflowStage.PLANNING,
+			description: item.description || "",
+			createdAt: new Date().toISOString(),
+			assignedTo: item.assignedTo || agents[0]?.name || "",
 		};
 
 		setContentItems((prev) => [...prev, newItem]);

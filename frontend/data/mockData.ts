@@ -1,4 +1,10 @@
-import { Agent, ActivityLog, PerformanceMetric, ContentItem } from "../types";
+import {
+	Agent,
+	ContentItem,
+	ActivityLog,
+	PerformanceMetric,
+	WorkflowStage,
+} from "../types";
 
 export const initialAgents: Agent[] = [
 	{
@@ -10,6 +16,41 @@ export const initialAgents: Agent[] = [
 		name: "Research & Data",
 		status: "idle",
 		output: "",
+	},
+];
+
+export const mockContentItems: ContentItem[] = [
+	{
+		id: "content-1",
+		title: "AI in Healthcare",
+		type: "article",
+		contentType: "blog",
+		tags: ["ai", "healthcare"],
+		metrics: {
+			views: 1200,
+			engagement: 80,
+			conversion: 10,
+		},
+		stage: WorkflowStage.PLANNING,
+		description: "Exploring AI applications in healthcare.",
+		createdAt: "2024-06-01T09:00:00Z",
+		assignedTo: "agent-1",
+	},
+	{
+		id: "content-2",
+		title: "The Future of Work",
+		type: "video",
+		contentType: "social",
+		tags: ["future", "work"],
+		metrics: {
+			views: 900,
+			engagement: 65,
+			conversion: 12,
+		},
+		stage: WorkflowStage.RESEARCH,
+		description: "Remote work trends and AI automation.",
+		createdAt: "2024-06-03T14:00:00Z",
+		assignedTo: "agent-2",
 	},
 ];
 
@@ -43,37 +84,23 @@ export const mockPerformanceMetrics: PerformanceMetric[] = [
 	},
 ];
 
-export const mockContentItems: ContentItem[] = [
+export const mockAnalyticsData = [
 	{
-		id: "content-1",
-		title: "AI in Healthcare",
-		type: "article",
-		contentType: "blog",
-		tags: ["ai", "healthcare"],
-		metrics: {
-			views: 1200,
-			engagement: 80,
-			conversion: 10,
-		},
-		stage: "Planning",
-		description: "Exploring AI applications in healthcare.",
-		createdAt: "2024-06-01T09:00:00Z",
-		assignedTo: "agent-1",
+		name: "Content Items",
+		data: [
+			{ month: "Jan", value: 40 },
+			{ month: "Feb", value: 55 },
+			{ month: "Mar", value: 65 },
+			{ month: "Apr", value: 80 },
+		],
 	},
 	{
-		id: "content-2",
-		title: "Next-Gen UX",
-		type: "video",
-		contentType: "social",
-		tags: ["design", "ux"],
-		metrics: {
-			views: 980,
-			engagement: 62,
-			conversion: 15,
-		},
-		stage: "Review",
-		description: "Trends in user experience design.",
-		createdAt: "2024-06-03T12:00:00Z",
-		assignedTo: "agent-2",
+		name: "Content Performance",
+		data: [
+			{ month: "Jan", engagement: 78, conversion: 12 },
+			{ month: "Feb", engagement: 85, conversion: 14 },
+			{ month: "Mar", engagement: 62, conversion: 9 },
+			{ month: "Apr", engagement: 90, conversion: 17 },
+		],
 	},
 ];
