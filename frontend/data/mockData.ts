@@ -1,27 +1,33 @@
-import {
-	Agent,
-	ContentItem,
-	ActivityLog,
-	PerformanceMetric,
-	WorkflowStage,
-} from "../types";
+// mockData.ts
 
+import { Agent, ContentItem, WorkflowStage } from "../types";
+
+// ✅ Initial Agents (with all required fields)
 export const initialAgents: Agent[] = [
 	{
+		id: "agent1",
 		name: "Content Strategist",
 		status: "active",
 		output: "Created roadmap",
+		tasksCompleted: 5,
+		avgCompletionTime: 120,
+		successRate: 0.92,
 	},
 	{
+		id: "agent2",
 		name: "Research & Data",
 		status: "idle",
 		output: "",
+		tasksCompleted: 0,
+		avgCompletionTime: 0,
+		successRate: 0.0,
 	},
 ];
 
+// ✅ Mock Content Items (with all required fields)
 export const mockContentItems: ContentItem[] = [
 	{
-		id: "content-1",
+		id: "content1",
 		title: "AI in Healthcare",
 		type: "article",
 		contentType: "blog",
@@ -32,40 +38,42 @@ export const mockContentItems: ContentItem[] = [
 			conversion: 10,
 		},
 		stage: WorkflowStage.PLANNING,
-		description: "Exploring AI applications in healthcare.",
-		createdAt: "2024-06-01T09:00:00Z",
-		assignedTo: "agent-1",
+		description: "An overview of AI applications in healthcare.",
+		createdAt: "2024-06-01T10:00:00Z",
+		assignedTo: "agent1",
 	},
 	{
-		id: "content-2",
-		title: "The Future of Work",
-		type: "video",
-		contentType: "social",
-		tags: ["future", "work"],
+		id: "content2",
+		title: "Blockchain for Creators",
+		type: "article",
+		contentType: "guide",
+		tags: ["blockchain", "creator economy"],
 		metrics: {
-			views: 900,
-			engagement: 65,
+			views: 850,
+			engagement: 60,
 			conversion: 12,
 		},
-		stage: WorkflowStage.RESEARCH,
-		description: "Remote work trends and AI automation.",
-		createdAt: "2024-06-03T14:00:00Z",
-		assignedTo: "agent-2",
+		stage: WorkflowStage.WRITING,
+		description: "How blockchain tech is empowering content creators.",
+		createdAt: "2024-06-05T09:30:00Z",
+		assignedTo: "agent2",
 	},
 ];
 
-export const mockActivityLogs: ActivityLog[] = [
+import { PerformanceMetric, ActivityLog } from "../types";
+
+export const mockAnalyticsData: ActivityLog[] = [
 	{
-		id: "log-1",
-		action: "Published Article",
-		details: "How AI is transforming business",
-		timestamp: "2024-06-01T09:00:00Z",
+		id: "log1",
+		action: "Created Content",
+		details: "Initial draft submitted by Research Agent",
+		timestamp: "2025-06-05T10:00:00Z",
 	},
 	{
-		id: "log-2",
-		action: "Edited Video",
-		details: "Behind the Scenes of the Studio",
-		timestamp: "2024-06-02T14:30:00Z",
+		id: "log2",
+		action: "Reviewed",
+		details: "Feedback added by QA",
+		timestamp: "2025-06-05T14:30:00Z",
 	},
 ];
 
@@ -73,34 +81,13 @@ export const mockPerformanceMetrics: PerformanceMetric[] = [
 	{
 		name: "Engagement Rate",
 		value: 78,
-		target: 90,
-		change: 4,
+		target: 85,
+		change: -7,
 	},
 	{
-		name: "Content Shares",
-		value: 1220,
-		target: 1500,
-		change: -6,
-	},
-];
-
-export const mockAnalyticsData = [
-	{
-		name: "Content Items",
-		data: [
-			{ month: "Jan", value: 40 },
-			{ month: "Feb", value: 55 },
-			{ month: "Mar", value: 65 },
-			{ month: "Apr", value: 80 },
-		],
-	},
-	{
-		name: "Content Performance",
-		data: [
-			{ month: "Jan", engagement: 78, conversion: 12 },
-			{ month: "Feb", engagement: 85, conversion: 14 },
-			{ month: "Mar", engagement: 62, conversion: 9 },
-			{ month: "Apr", engagement: 90, conversion: 17 },
-		],
+		name: "Conversion Rate",
+		value: 12,
+		target: 10,
+		change: +2,
 	},
 ];

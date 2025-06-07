@@ -20,7 +20,7 @@ const WorkflowVisualizer: React.FC<WorkflowVisualizerProps> = ({
 }) => {
 	const stages = [
 		{
-			key: "PLANNING",
+			key: WorkflowStage.PLANNING,
 			label: "Planning",
 			icon: <BrainCircuit className="w-5 h-5" />,
 			color: "bg-primary-600",
@@ -28,7 +28,7 @@ const WorkflowVisualizer: React.FC<WorkflowVisualizerProps> = ({
 			description: "Strategy & planning",
 		},
 		{
-			key: "RESEARCH",
+			key: WorkflowStage.RESEARCH,
 			label: "Research",
 			icon: <FileSearch className="w-5 h-5" />,
 			color: "bg-secondary-600",
@@ -36,7 +36,7 @@ const WorkflowVisualizer: React.FC<WorkflowVisualizerProps> = ({
 			description: "Data gathering",
 		},
 		{
-			key: "WRITING",
+			key: WorkflowStage.WRITING,
 			label: "Writing",
 			icon: <PenTool className="w-5 h-5" />,
 			color: "bg-accent-600",
@@ -44,7 +44,7 @@ const WorkflowVisualizer: React.FC<WorkflowVisualizerProps> = ({
 			description: "Content creation",
 		},
 		{
-			key: "REVIEW",
+			key: WorkflowStage.REVIEW,
 			label: "Review",
 			icon: <CheckCircle className="w-5 h-5" />,
 			color: "bg-success-600",
@@ -52,7 +52,7 @@ const WorkflowVisualizer: React.FC<WorkflowVisualizerProps> = ({
 			description: "Quality check",
 		},
 		{
-			key: "PUBLISHING",
+			key: WorkflowStage.PUBLISHED,
 			label: "Publishing",
 			icon: <Upload className="w-5 h-5" />,
 			color: "bg-warning-600",

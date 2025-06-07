@@ -17,6 +17,7 @@ export enum WorkflowStage {
 	REVIEW = "Review",
 	PUBLISHED = "Published",
 	ARCHIVED = "Archived",
+	ALL = "All",
 }
 
 export type ContentItem = {
