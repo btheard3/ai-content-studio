@@ -1,5 +1,0 @@
-id: quality_control
-name: Quality Control
-entry_point: backend.agents.quality_control.agent:QualityControlAgent
-description: Fixes grammar, clarity, tone issues
-# Placeholder
