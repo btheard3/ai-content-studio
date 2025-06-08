@@ -10,6 +10,11 @@ class AgentInput:
     def from_text(cls, text: str) -> "AgentInput":
         return cls({"text": text})
 
+    @property
+    def text(self) -> str:
+        return self.data.get("text", "")
+
+
 class AgentOutput:
     def __init__(self, data: Dict[str, Any]):
         self.data = data

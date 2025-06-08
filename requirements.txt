@@ -1,0 +1,9 @@
+# === Compatible Versions ===
+fastapi==0.95.2
+uvicorn==0.22.0
+python-dotenv==1.0.1
+openai>=1.0.0
+PyYAML==6.0.1
+
+# Optional - GCP clients if needed later
+# google-cloud-aiplatform==1.38.0
