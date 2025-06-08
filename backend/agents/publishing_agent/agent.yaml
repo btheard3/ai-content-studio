@@ -1,1 +1,4 @@
-# Placeholder
+id: publishing_agent
+name: Publishing Agent
+entry_point: backend.agents.publishing_agent.agent:PublishingAgent
+description: Final formatting and publishing

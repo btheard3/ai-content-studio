@@ -1,1 +1,4 @@
-# Placeholder
+id: creative_writer
+name: Creative Writer
+entry_point: backend.agents.creative_writer.agent:CreativeWriterAgent
+description: Writes core content based on plan and research

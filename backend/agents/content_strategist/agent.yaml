@@ -1,1 +1,4 @@
-# Placeholder
+id: content_strategist
+name: Content Strategist
+entry_point: backend.agents.content_strategist.agent:ContentStrategistAgent
+description: Plans high-level content goals
