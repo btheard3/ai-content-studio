@@ -1,0 +1,4 @@
+id: research_data
+name: Research & Data Agent
+entry_point: backend.agents.research_data.agent:ResearchDataAgent
+description: Gathers trending topics and relevant facts

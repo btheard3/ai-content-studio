@@ -1,9 +1,13 @@
-# Placeholderid: content_creation_pipeline
-description: AI-powered content generation pipeline
-entry_point: backend.main:app
+entry_point: content_strategist
+
 agents:
-  - backend/agents/content_strategist/agent.yaml
-  - backend/agents/research_data/agent.yaml
-  - backend/agents/creative_writer/agent.yaml
-  - backend/agents/quality_control/agent.yaml
-  - backend/agents/publishing_agent/agent.yaml
+  content_strategist:
+    spec_path: content_strategist.agent
+  research_data:
+    spec_path: research_data.agent
+  creative_writer:
+    spec_path: creative_writer.agent
+  quality_control:
+    spec_path: quality_control.agent
+  publishing_agent:
+    spec_path: publishing_agent.agent

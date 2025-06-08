@@ -1,19 +1,26 @@
+# backend/main.py
+
 from fastapi import FastAPI
-from google.runtime import AgentExecutor
-import yaml
 import uvicorn
+import yaml
+import traceback
+
+from backend.executor import AgentExecutor
 
 app = FastAPI()
 
-with open("backend/task.yaml", "r") as f:
-    task = yaml.safe_load(f)
-
-executor = AgentExecutor.from_task_spec(task)
+# Initialize the AgentExecutor with the correct task file path
+executor = AgentExecutor("backend/task.yaml")
 
 @app.post("/run/{agent_id}")
 def run_agent(agent_id: str):
-    result = executor.run_agent(agent_id)
-    return result.output.to_json()
+    try:
+        result = executor.run_agent(agent_id)
+        return result.to_json()
+    except Exception as e:
+        print(f"\n🚨 ERROR while running agent '{agent_id}':", e)
+        traceback.print_exc()
+        return {"error": str(e)}
 
 @app.get("/")
 def read_root():
@@ -21,3 +28,6 @@ def read_root():
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+
+
