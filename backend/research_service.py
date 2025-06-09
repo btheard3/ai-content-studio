@@ -7,6 +7,9 @@ from datetime import datetime, timedelta
 import re
 from urllib.parse import quote_plus
 import json
+import arxiv
+import wikipedia
+from bs4 import BeautifulSoup
 
 from backend.database import ResearchDatabase
 
@@ -47,144 +50,344 @@ class ResearchService:
         return True
 
     async def _search_academic_sources(self, query: str, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Search academic databases and sources"""
+        """Search academic databases and sources using real APIs"""
         results = []
         
-        # Simulate academic database search
-        # In a real implementation, this would integrate with APIs like:
-        # - arXiv API
-        # - PubMed API
-        # - Google Scholar (via scraping)
-        # - CrossRef API
-        
-        academic_results = [
-            {
-                'title': f'Academic Study on {query}',
-                'content': f'Comprehensive research findings related to {query} from peer-reviewed sources.',
-                'source': 'Academic Database',
-                'url': f'https://example-academic.com/study/{quote_plus(query)}',
-                'relevance_score': 0.9,
-                'data_type': 'academic',
-                'metadata': {
-                    'publication_date': '2024-01-15',
-                    'authors': ['Dr. Smith', 'Dr. Johnson'],
-                    'journal': 'Research Journal',
-                    'citations': 45
+        try:
+            # Search arXiv for academic papers
+            search = arxiv.Search(
+                query=query,
+                max_results=10,
+                sort_by=arxiv.SortCriterion.Relevance
+            )
+            
+            for paper in search.results():
+                result = {
+                    'title': paper.title,
+                    'content': paper.summary[:500] + "..." if len(paper.summary) > 500 else paper.summary,
+                    'source': 'arXiv',
+                    'url': paper.entry_id,
+                    'relevance_score': self._calculate_relevance_score_text(paper.title + " " + paper.summary, query),
+                    'data_type': 'academic',
+                    'metadata': {
+                        'publication_date': paper.published.isoformat() if paper.published else None,
+                        'authors': [author.name for author in paper.authors],
+                        'journal': 'arXiv',
+                        'categories': paper.categories,
+                        'doi': paper.doi
+                    }
                 }
-            },
-            {
-                'title': f'Meta-Analysis: {query}',
-                'content': f'Statistical analysis and meta-review of multiple studies on {query}.',
-                'source': 'PubMed',
-                'url': f'https://pubmed.ncbi.nlm.nih.gov/search/{quote_plus(query)}',
-                'relevance_score': 0.85,
-                'data_type': 'meta-analysis',
-                'metadata': {
-                    'publication_date': '2024-02-20',
-                    'study_count': 23,
-                    'sample_size': 15000
-                }
-            }
-        ]
+                results.append(result)
+                
+        except Exception as e:
+            logger.error(f"Error searching arXiv: {e}")
+            # Add a fallback result to indicate the error
+            results.append({
+                'title': f'arXiv Search Error for "{query}"',
+                'content': f'Unable to retrieve arXiv results: {str(e)}',
+                'source': 'arXiv',
+                'url': '',
+                'relevance_score': 0.1,
+                'data_type': 'error',
+                'metadata': {'error': str(e)}
+            })
+
+        # Search PubMed via web scraping (since no direct API key)
+        try:
+            if self.session:
+                pubmed_url = f"https://pubmed.ncbi.nlm.nih.gov/?term={quote_plus(query)}&size=5"
+                async with self.session.get(pubmed_url, timeout=10) as response:
+                    if response.status == 200:
+                        html = await response.text()
+                        soup = BeautifulSoup(html, 'html.parser')
+                        
+                        articles = soup.find_all('article', class_='full-docsum')[:3]
+                        for article in articles:
+                            title_elem = article.find('a', class_='docsum-title')
+                            abstract_elem = article.find('div', class_='full-view-snippet')
+                            
+                            if title_elem:
+                                title = title_elem.get_text(strip=True)
+                                abstract = abstract_elem.get_text(strip=True) if abstract_elem else "Abstract not available"
+                                link = "https://pubmed.ncbi.nlm.nih.gov" + title_elem.get('href', '')
+                                
+                                result = {
+                                    'title': title,
+                                    'content': abstract[:400] + "..." if len(abstract) > 400 else abstract,
+                                    'source': 'PubMed',
+                                    'url': link,
+                                    'relevance_score': self._calculate_relevance_score_text(title + " " + abstract, query),
+                                    'data_type': 'academic',
+                                    'metadata': {
+                                        'publication_date': datetime.now().isoformat(),
+                                        'source_database': 'PubMed'
+                                    }
+                                }
+                                results.append(result)
+                                
+        except Exception as e:
+            logger.error(f"Error searching PubMed: {e}")
         
-        results.extend(academic_results)
         return results
 
     async def _search_web_sources(self, query: str, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Search web sources and news"""
+        """Search web sources using Wikipedia and web scraping"""
         results = []
         
-        # Simulate web search results
-        # In a real implementation, this would use:
-        # - Google Custom Search API
-        # - Bing Search API
-        # - News APIs
-        # - Web scraping with proper rate limiting
+        # Search Wikipedia
+        try:
+            # Search for Wikipedia articles
+            search_results = wikipedia.search(query, results=5)
+            
+            for title in search_results[:3]:
+                try:
+                    page = wikipedia.page(title)
+                    summary = wikipedia.summary(title, sentences=3)
+                    
+                    result = {
+                        'title': page.title,
+                        'content': summary,
+                        'source': 'Wikipedia',
+                        'url': page.url,
+                        'relevance_score': self._calculate_relevance_score_text(page.title + " " + summary, query),
+                        'data_type': 'encyclopedia',
+                        'metadata': {
+                            'publication_date': datetime.now().isoformat(),
+                            'page_id': page.pageid,
+                            'categories': getattr(page, 'categories', [])[:5]
+                        }
+                    }
+                    results.append(result)
+                    
+                except wikipedia.exceptions.DisambiguationError as e:
+                    # Handle disambiguation by taking the first option
+                    try:
+                        page = wikipedia.page(e.options[0])
+                        summary = wikipedia.summary(e.options[0], sentences=3)
+                        
+                        result = {
+                            'title': page.title,
+                            'content': summary,
+                            'source': 'Wikipedia',
+                            'url': page.url,
+                            'relevance_score': self._calculate_relevance_score_text(page.title + " " + summary, query),
+                            'data_type': 'encyclopedia',
+                            'metadata': {
+                                'publication_date': datetime.now().isoformat(),
+                                'page_id': page.pageid,
+                                'disambiguation': True
+                            }
+                        }
+                        results.append(result)
+                    except:
+                        continue
+                        
+                except wikipedia.exceptions.PageError:
+                    continue
+                    
+        except Exception as e:
+            logger.error(f"Error searching Wikipedia: {e}")
+
+        # Search news sources via web scraping
+        try:
+            if self.session:
+                # Search Google News (basic scraping)
+                news_url = f"https://news.google.com/rss/search?q={quote_plus(query)}&hl=en-US&gl=US&ceid=US:en"
+                
+                async with self.session.get(news_url, timeout=10) as response:
+                    if response.status == 200:
+                        content = await response.text()
+                        # Parse RSS feed
+                        soup = BeautifulSoup(content, 'xml')
+                        items = soup.find_all('item')[:3]
+                        
+                        for item in items:
+                            title = item.find('title')
+                            description = item.find('description')
+                            link = item.find('link')
+                            pub_date = item.find('pubDate')
+                            
+                            if title and description:
+                                result = {
+                                    'title': title.get_text(strip=True),
+                                    'content': description.get_text(strip=True)[:300] + "...",
+                                    'source': 'Google News',
+                                    'url': link.get_text(strip=True) if link else '',
+                                    'relevance_score': self._calculate_relevance_score_text(title.get_text() + " " + description.get_text(), query),
+                                    'data_type': 'news',
+                                    'metadata': {
+                                        'publication_date': pub_date.get_text(strip=True) if pub_date else datetime.now().isoformat(),
+                                        'source_type': 'news_aggregator'
+                                    }
+                                }
+                                results.append(result)
+                                
+        except Exception as e:
+            logger.error(f"Error searching news sources: {e}")
         
-        web_results = [
-            {
-                'title': f'Industry Report: {query}',
-                'content': f'Latest industry insights and trends related to {query}.',
-                'source': 'Industry News',
-                'url': f'https://example-news.com/report/{quote_plus(query)}',
-                'relevance_score': 0.8,
-                'data_type': 'news',
-                'metadata': {
-                    'publication_date': '2024-03-01',
-                    'author': 'Industry Expert',
-                    'category': 'Business'
-                }
-            },
-            {
-                'title': f'Market Analysis: {query}',
-                'content': f'Comprehensive market analysis and forecasting for {query}.',
-                'source': 'Market Research',
-                'url': f'https://example-market.com/analysis/{quote_plus(query)}',
-                'relevance_score': 0.75,
-                'data_type': 'market-data',
-                'metadata': {
-                    'publication_date': '2024-02-28',
-                    'market_size': '$2.5B',
-                    'growth_rate': '15%'
-                }
-            }
-        ]
-        
-        results.extend(web_results)
         return results
 
     async def _search_statistical_sources(self, query: str, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Search statistical databases"""
+        """Search statistical databases and government sources"""
         results = []
         
-        # Simulate statistical data search
-        # In a real implementation, this would integrate with:
-        # - Government statistical APIs
-        # - World Bank API
-        # - OECD API
-        # - Census data APIs
+        # Search World Bank data
+        try:
+            if self.session:
+                # World Bank API search
+                wb_url = f"https://api.worldbank.org/v2/indicator?format=json&q={quote_plus(query)}"
+                
+                async with self.session.get(wb_url, timeout=10) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        
+                        if len(data) > 1 and data[1]:
+                            indicators = data[1][:3]  # Get first 3 indicators
+                            
+                            for indicator in indicators:
+                                result = {
+                                    'title': f"World Bank: {indicator.get('name', 'Statistical Indicator')}",
+                                    'content': f"Statistical indicator: {indicator.get('sourceNote', 'World Bank statistical data related to ' + query)}",
+                                    'source': 'World Bank',
+                                    'url': f"https://data.worldbank.org/indicator/{indicator.get('id', '')}",
+                                    'relevance_score': self._calculate_relevance_score_text(indicator.get('name', '') + " " + indicator.get('sourceNote', ''), query),
+                                    'data_type': 'statistics',
+                                    'metadata': {
+                                        'indicator_id': indicator.get('id'),
+                                        'source_organization': indicator.get('sourceOrganization'),
+                                        'last_updated': datetime.now().isoformat(),
+                                        'data_type': 'economic_indicator'
+                                    }
+                                }
+                                results.append(result)
+                                
+        except Exception as e:
+            logger.error(f"Error searching World Bank data: {e}")
+
+        # Search US Census data (if applicable)
+        try:
+            if 'united states' in query.lower() or 'us ' in query.lower() or 'census' in query.lower():
+                if self.session:
+                    # Census API search (basic)
+                    census_url = "https://api.census.gov/data.json"
+                    
+                    async with self.session.get(census_url, timeout=10) as response:
+                        if response.status == 200:
+                            data = await response.json()
+                            
+                            # Filter datasets related to query
+                            relevant_datasets = []
+                            for dataset in data.get('dataset', [])[:20]:
+                                title = dataset.get('title', '').lower()
+                                description = dataset.get('description', '').lower()
+                                
+                                if any(term in title or term in description for term in query.lower().split()):
+                                    relevant_datasets.append(dataset)
+                                    
+                            for dataset in relevant_datasets[:2]:
+                                result = {
+                                    'title': f"US Census: {dataset.get('title', 'Census Dataset')}",
+                                    'content': dataset.get('description', 'US Census Bureau statistical data'),
+                                    'source': 'US Census Bureau',
+                                    'url': f"https://api.census.gov/data/{dataset.get('c_vintage', '')}/{dataset.get('c_dataset', '')}",
+                                    'relevance_score': self._calculate_relevance_score_text(dataset.get('title', '') + " " + dataset.get('description', ''), query),
+                                    'data_type': 'statistics',
+                                    'metadata': {
+                                        'vintage': dataset.get('c_vintage'),
+                                        'dataset_id': dataset.get('c_dataset'),
+                                        'last_updated': datetime.now().isoformat(),
+                                        'geographic_level': dataset.get('c_geographyLink')
+                                    }
+                                }
+                                results.append(result)
+                                
+        except Exception as e:
+            logger.error(f"Error searching Census data: {e}")
         
-        stats_results = [
-            {
-                'title': f'Statistical Data: {query}',
-                'content': f'Official statistical data and trends for {query}.',
-                'source': 'Government Statistics',
-                'url': f'https://example-stats.gov/data/{quote_plus(query)}',
-                'relevance_score': 0.95,
-                'data_type': 'statistics',
-                'metadata': {
-                    'data_period': '2020-2024',
-                    'sample_size': 100000,
-                    'confidence_level': '95%',
-                    'last_updated': '2024-03-01'
-                }
-            }
-        ]
-        
-        results.extend(stats_results)
         return results
+
+    def _calculate_relevance_score_text(self, text: str, query: str) -> float:
+        """Calculate relevance score based on text content and query"""
+        if not text or not query:
+            return 0.0
+            
+        text_lower = text.lower()
+        query_terms = [term.strip() for term in query.lower().split() if len(term.strip()) > 2]
+        
+        if not query_terms:
+            return 0.5
+        
+        score = 0.0
+        
+        # Exact phrase match (highest weight)
+        if query.lower() in text_lower:
+            score += 0.4
+        
+        # Individual term matches
+        term_matches = sum(1 for term in query_terms if term in text_lower)
+        term_score = (term_matches / len(query_terms)) * 0.4
+        score += term_score
+        
+        # Proximity bonus (terms appearing close together)
+        for i, term1 in enumerate(query_terms):
+            for term2 in query_terms[i+1:]:
+                if term1 in text_lower and term2 in text_lower:
+                    pos1 = text_lower.find(term1)
+                    pos2 = text_lower.find(term2)
+                    distance = abs(pos1 - pos2)
+                    if distance < 50:  # Terms within 50 characters
+                        score += 0.1
+        
+        # Length penalty for very short content
+        if len(text) < 100:
+            score *= 0.8
+        
+        return min(1.0, score)
 
     def _filter_results(self, results: List[Dict[str, Any]], filters: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Apply filters to search results"""
         filtered_results = results
         
         # Date range filter
-        if 'date_from' in filters and 'date_to' in filters:
-            date_from = datetime.fromisoformat(filters['date_from'])
-            date_to = datetime.fromisoformat(filters['date_to'])
-            
-            filtered_results = [
-                result for result in filtered_results
-                if 'publication_date' in result.get('metadata', {})
-                and date_from <= datetime.fromisoformat(result['metadata']['publication_date']) <= date_to
-            ]
+        if 'date_from' in filters and 'date_to' in filters and filters['date_from'] and filters['date_to']:
+            try:
+                date_from = datetime.fromisoformat(filters['date_from'])
+                date_to = datetime.fromisoformat(filters['date_to'])
+                
+                filtered_results = []
+                for result in results:
+                    pub_date_str = result.get('metadata', {}).get('publication_date')
+                    if pub_date_str:
+                        try:
+                            pub_date = datetime.fromisoformat(pub_date_str.replace('Z', '+00:00'))
+                            if date_from <= pub_date <= date_to:
+                                filtered_results.append(result)
+                        except:
+                            # If date parsing fails, include the result
+                            filtered_results.append(result)
+                    else:
+                        # If no publication date, include the result
+                        filtered_results.append(result)
+            except:
+                # If date filter parsing fails, don't apply date filter
+                pass
         
         # Source filter
         if 'sources' in filters and filters['sources']:
             allowed_sources = filters['sources']
+            source_mapping = {
+                'academic': ['arXiv', 'PubMed'],
+                'web': ['Wikipedia', 'Google News'],
+                'statistics': ['World Bank', 'US Census Bureau']
+            }
+            
+            allowed_source_names = []
+            for source_type in allowed_sources:
+                allowed_source_names.extend(source_mapping.get(source_type, [source_type]))
+            
             filtered_results = [
                 result for result in filtered_results
-                if result['source'] in allowed_sources
+                if result['source'] in allowed_source_names
             ]
         
         # Data type filter
@@ -206,36 +409,14 @@ class ResearchService:
         return filtered_results
 
     def _calculate_relevance_score(self, result: Dict[str, Any], query: str) -> float:
-        """Calculate relevance score for a result"""
-        score = 0.0
-        query_terms = query.lower().split()
-        
-        # Title relevance
-        title_matches = sum(1 for term in query_terms if term in result['title'].lower())
-        score += (title_matches / len(query_terms)) * 0.4
-        
-        # Content relevance
-        content_matches = sum(1 for term in query_terms if term in result['content'].lower())
-        score += (content_matches / len(query_terms)) * 0.3
-        
-        # Source credibility
-        credible_sources = ['Academic Database', 'PubMed', 'Government Statistics']
-        if result['source'] in credible_sources:
-            score += 0.2
-        
-        # Recency bonus
-        if 'publication_date' in result.get('metadata', {}):
-            pub_date = datetime.fromisoformat(result['metadata']['publication_date'])
-            days_old = (datetime.now() - pub_date).days
-            if days_old < 30:
-                score += 0.1
-            elif days_old < 90:
-                score += 0.05
-        
-        return min(1.0, score)
+        """Calculate relevance score for a result (legacy method)"""
+        return self._calculate_relevance_score_text(
+            result.get('title', '') + " " + result.get('content', ''), 
+            query
+        )
 
     async def search(self, query: str, filters: Dict[str, Any] = None, user_id: str = None) -> Dict[str, Any]:
-        """Perform comprehensive research search"""
+        """Perform comprehensive research search using real data sources"""
         if filters is None:
             filters = {}
         
@@ -271,11 +452,6 @@ class ResearchService:
                     stats_results = await self._search_statistical_sources(query, filters)
                     all_results.extend(stats_results)
             
-            # Calculate relevance scores
-            for result in all_results:
-                if 'relevance_score' not in result:
-                    result['relevance_score'] = self._calculate_relevance_score(result, query)
-            
             # Apply filters
             filtered_results = self._filter_results(all_results, filters)
             
@@ -307,44 +483,73 @@ class ResearchService:
             raise
 
     def get_search_suggestions(self, partial_query: str) -> List[str]:
-        """Get search suggestions based on partial query"""
-        # In a real implementation, this would use:
-        # - Previous successful queries
-        # - Popular search terms
-        # - Auto-complete APIs
+        """Get search suggestions based on partial query and previous searches"""
+        suggestions = []
         
-        suggestions = [
-            f"{partial_query} trends",
-            f"{partial_query} statistics",
-            f"{partial_query} market analysis",
-            f"{partial_query} research findings",
-            f"{partial_query} industry report"
-        ]
+        # Get suggestions from previous successful queries
+        try:
+            recent_queries = self.db.get_recent_queries(limit=50)
+            
+            # Find queries that contain the partial query
+            for query_data in recent_queries:
+                query_text = query_data.get('query_text', '').lower()
+                if partial_query.lower() in query_text and query_text not in suggestions:
+                    suggestions.append(query_data.get('query_text'))
+                    
+            # If we have fewer than 3 suggestions, add some generic ones
+            if len(suggestions) < 3:
+                generic_suggestions = [
+                    f"{partial_query} trends",
+                    f"{partial_query} statistics",
+                    f"{partial_query} research",
+                    f"{partial_query} analysis",
+                    f"{partial_query} data"
+                ]
+                
+                for suggestion in generic_suggestions:
+                    if suggestion not in suggestions:
+                        suggestions.append(suggestion)
+                        if len(suggestions) >= 5:
+                            break
+                            
+        except Exception as e:
+            logger.error(f"Error getting search suggestions: {e}")
+            # Fallback to generic suggestions
+            suggestions = [
+                f"{partial_query} trends",
+                f"{partial_query} statistics",
+                f"{partial_query} research",
+                f"{partial_query} analysis",
+                f"{partial_query} data"
+            ]
         
         return suggestions[:5]
 
     def get_data_sources(self) -> List[Dict[str, Any]]:
-        """Get available data sources"""
+        """Get available data sources with real source information"""
         return [
             {
                 'id': 'academic',
                 'name': 'Academic Databases',
-                'description': 'Peer-reviewed research papers and academic studies',
+                'description': 'arXiv preprints and PubMed medical literature',
                 'types': ['academic', 'meta-analysis'],
-                'is_active': True
+                'is_active': True,
+                'sources': ['arXiv', 'PubMed']
             },
             {
                 'id': 'web',
                 'name': 'Web Sources',
-                'description': 'News articles, industry reports, and web content',
-                'types': ['news', 'market-data', 'reports'],
-                'is_active': True
+                'description': 'Wikipedia articles and news from Google News',
+                'types': ['encyclopedia', 'news'],
+                'is_active': True,
+                'sources': ['Wikipedia', 'Google News']
             },
             {
                 'id': 'statistics',
                 'name': 'Statistical Databases',
-                'description': 'Government statistics and official data',
-                'types': ['statistics', 'census', 'economic-data'],
-                'is_active': True
+                'description': 'World Bank indicators and US Census data',
+                'types': ['statistics', 'economic-data'],
+                'is_active': True,
+                'sources': ['World Bank', 'US Census Bureau']
             }
         ]
