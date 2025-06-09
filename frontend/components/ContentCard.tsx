@@ -1,33 +1,60 @@
-import React from "react";
-import { ContentItem } from "../types";
-import { FaFileAlt } from "react-icons/fa";
+// frontend/components/ContentCard.tsx
+import React, { useState } from "react";
+import axios from "axios";
 
-interface Props {
-	content: ContentItem;
-	onAdvance: () => void;
-}
+const ContentStrategistCard = () => {
+	const [input, setInput] = useState("");
+	const [output, setOutput] = useState("");
+	const [loading, setLoading] = useState(false);
 
-const ContentCard: React.FC<Props> = ({ content, onAdvance }) => {
+	const runAgent = async () => {
+		try {
+			setLoading(true);
+			const response = await axios.post(
+				"http://localhost:8000/run/content_strategist",
+				{
+					text: input,
+				}
+			);
+
+			// Safely access the 'text' field
+			setOutput(response.data?.text ?? "❌ No content returned.");
+		} catch (error: any) {
+			console.error("Agent Error:", error);
+			setOutput(
+				"⚠️ Error: " +
+					(error?.response?.data?.error ?? error?.message ?? "Unknown error")
+			);
+		} finally {
+			setLoading(false);
+		}
+	};
+
 	return (
-		<div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
-			<div className="flex items-center gap-3 text-gray-700 mb-2">
-				<FaFileAlt className="text-gray-400" />
-				<h3 className="font-semibold">{content.title}</h3>
-			</div>
-			<p className="text-sm text-gray-500">{content.description}</p>
-			<div className="mt-2 text-xs text-gray-400">
-				{content.type} • {content.contentType}
-			</div>
-			<div className="mt-2 flex justify-between items-center text-sm text-gray-600">
-				<span>{content.stage}</span>
-				<button
-					onClick={onAdvance}
-					className="text-sm text-blue-600 hover:underline">
-					Advance →
-				</button>
+		<div className="bg-white p-4 rounded shadow mt-4">
+			<h4 className="text-lg font-semibold mb-2">Content Strategist</h4>
+
+			<textarea
+				className="w-full border rounded p-2 mb-2"
+				rows={3}
+				placeholder="Enter a content idea or prompt"
+				value={input}
+				onChange={(e) => setInput(e.target.value)}
+			/>
+
+			<button
+				onClick={runAgent}
+				className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition disabled:opacity-50"
+				disabled={loading || !input}>
+				{loading ? "Generating..." : "⚡ Generate Content Roadmap"}
+			</button>
+
+			<div className="mt-4">
+				<h5 className="font-bold">Generated Output:</h5>
+				<p className="whitespace-pre-wrap text-gray-800 mt-1">{output}</p>
 			</div>
 		</div>
 	);
 };
 
-export default ContentCard;
+export default ContentStrategistCard;

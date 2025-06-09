@@ -1,6 +1,7 @@
 # backend/main.py
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import yaml
 import traceback
@@ -9,7 +10,16 @@ from backend.executor import AgentExecutor
 
 app = FastAPI()
 
-# Initialize the AgentExecutor with the correct task file path
+# ✅ Enable CORS so frontend (localhost:5173) can make requests
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],  # You can use ["*"] for dev/testing
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ✅ Load AgentExecutor with correct task file
 executor = AgentExecutor("backend/task.yaml")
 
 @app.post("/run/{agent_id}")
@@ -18,7 +28,7 @@ def run_agent(agent_id: str):
         result = executor.run_agent(agent_id)
         return result.to_json()
     except Exception as e:
-        print(f"\n🚨 ERROR while running agent '{agent_id}':", e)
+        print(f"\n❌ ERROR while running agent '{agent_id}':", e)
         traceback.print_exc()
         return {"error": str(e)}
 
