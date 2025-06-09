@@ -10,7 +10,8 @@ import {
   X,
   Sparkles,
   Bell,
-  Search
+  Search as SearchIcon,
+  Database
 } from "lucide-react";
 
 type LayoutProps = {
@@ -32,6 +33,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       icon: <Workflow className="w-5 h-5" />,
       label: "Workflow",
       description: "Content pipeline"
+    },
+    {
+      to: "/research",
+      icon: <Database className="w-5 h-5" />,
+      label: "Research",
+      description: "Data & insights"
     },
     {
       to: "/analytics",
@@ -178,7 +185,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 whileHover={{ scale: 1.02 }}
                 whileFocus={{ scale: 1.02 }}
               >
-                <Search className="w-4 h-4 text-gray-500 mr-2" />
+                <SearchIcon className="w-4 h-4 text-gray-500 mr-2" />
                 <input
                   type="text"
                   placeholder="Search content..."

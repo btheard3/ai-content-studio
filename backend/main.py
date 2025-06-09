@@ -6,8 +6,14 @@ from pydantic import BaseModel
 import uvicorn
 import yaml
 import traceback
+import logging
 
 from backend.executor import AgentExecutor
+from backend.research_api import router as research_router
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="AI Content Studio API", version="1.0.0")
 
@@ -19,6 +25,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include research API routes
+app.include_router(research_router)
 
 # ✅ Load AgentExecutor with correct task file
 executor = AgentExecutor("backend/task.yaml")
@@ -102,13 +111,14 @@ def list_agents():
 @app.get("/")
 def read_root():
     return {
-        "message": "AI Content Studio + ADK backend is live!",
+        "message": "AI Content Studio + Research Agent backend is live!",
         "version": "1.0.0",
         "endpoints": {
             "workflow": "/run_workflow",
             "single_agent": "/run/{agent_id}",
             "workflow_info": "/workflow/info",
-            "agents": "/agents"
+            "agents": "/agents",
+            "research": "/api/research/*"
         }
     }
 

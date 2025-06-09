@@ -6,6 +6,7 @@ import Dashboard from "./pages/Dashboard";
 import Analytics from "./pages/Analytics";
 import ContentWorkflow from "./pages/ContentWorkflow";
 import Settings from "./pages/Settings";
+import ResearchPage from "./pages/ResearchPage";
 import { AgentProvider } from "./context/AgentContext";
 
 const App: React.FC = () => {
@@ -15,6 +16,7 @@ const App: React.FC = () => {
 				<Routes>
 					<Route path="/" element={<Dashboard />} />
 					<Route path="/workflow" element={<ContentWorkflow />} />
+					<Route path="/research" element={<ResearchPage />} />
 					<Route path="/analytics" element={<Analytics />} />
 					<Route path="/settings" element={<Settings />} />
 				</Routes>
