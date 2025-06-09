@@ -99,7 +99,7 @@ class ResearchService:
                 async with self.session.get(pubmed_url, timeout=10) as response:
                     if response.status == 200:
                         html = await response.text()
-                        soup = BeautifulSoup(html, 'html.parser')
+                        soup = BeautifulSoup(html, 'lxml')
                         
                         articles = soup.find_all('article', class_='full-docsum')[:3]
                         for article in articles:
@@ -198,7 +198,7 @@ class ResearchService:
                     if response.status == 200:
                         content = await response.text()
                         # Parse RSS feed
-                        soup = BeautifulSoup(content, 'xml')
+                        soup = BeautifulSoup(content, 'lxml-xml')
                         items = soup.find_all('item')[:3]
                         
                         for item in items:
