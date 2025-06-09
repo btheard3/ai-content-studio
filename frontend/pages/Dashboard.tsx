@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import ContentGenerationForm from "../components/ContentCard";
 import ResearchDataCard from "../components/ResearchDataCard";
+import CreativeWriterCard from "../components/CreativeWriterCard";
 import { useAgents } from "../context/AgentContext";
 
 const Dashboard: React.FC = () => {

@@ -1,4 +1,11 @@
-id: creative_writer
-name: Creative Writer
-entry_point: backend.agents.creative_writer.agent:CreativeWriterAgent
-description: Writes core content based on plan and research
+name: creative_writer
+spec_path: creative_writer.agent
+input_keys:
+  - content_roadmap
+  - research_summary
+  - campaign_theme
+  - key_pillars
+output_keys:
+  - creative_draft
+  - content_sections
+  - tone_analysis
