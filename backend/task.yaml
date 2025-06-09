@@ -3,11 +3,41 @@ entry_point: content_strategist
 agents:
   content_strategist:
     spec_path: content_strategist.agent
+    input_keys: ["text"]
+    output_keys: ["content_roadmap", "campaign_theme", "key_pillars"]
   research_data:
     spec_path: research_data.agent
+    input_keys: ["content_roadmap", "campaign_theme"]
+    output_keys: ["research_summary", "trending_topics", "statistics"]
   creative_writer:
     spec_path: creative_writer.agent
+    input_keys: ["content_roadmap", "research_summary", "campaign_theme", "key_pillars"]
+    output_keys: ["creative_draft", "content_sections", "tone_analysis"]
   quality_control:
     spec_path: quality_control.agent
+    input_keys: ["creative_draft", "content_sections", "campaign_theme"]
+    output_keys: ["final_content", "quality_score", "improvements_made"]
   publishing_agent:
     spec_path: publishing_agent.agent
+    input_keys: ["final_content", "campaign_theme"]
+    output_keys: ["published_status", "distribution_channels", "publication_metadata"]
+
+workflow:
+  name: "Content Generation Pipeline"
+  description: "End-to-end content creation workflow"
+  stages:
+    - agent: content_strategist
+      name: "Strategic Planning"
+      description: "Generate content strategy and roadmap"
+    - agent: research_data
+      name: "Research & Data Collection"
+      description: "Gather relevant data and trending topics"
+    - agent: creative_writer
+      name: "Content Creation"
+      description: "Write engaging content based on strategy and research"
+    - agent: quality_control
+      name: "Quality Assurance"
+      description: "Review and improve content quality"
+    - agent: publishing_agent
+      name: "Publishing & Distribution"
+      description: "Format and publish content to platforms"
