@@ -16,6 +16,7 @@ import {
   Eye,
   TrendingUp
 } from "lucide-react";
+import CreativeWriterCard from "./CreativeWriterCard";
 
 interface WorkflowStage {
   agent_id: string;
@@ -368,6 +369,15 @@ const ContentGenerationForm = () => {
                     </h5>
                     <p className="text-blue-700">{workflowResult.data.campaign_theme}</p>
                   </motion.div>
+                )}
+
+                {/* Creative Writer Output */}
+                {workflowResult.data.creative_draft && (
+                  <CreativeWriterCard
+                    creative_draft={workflowResult.data.creative_draft}
+                    content_sections={workflowResult.data.content_sections || ""}
+                    tone_analysis={workflowResult.data.tone_analysis || ""}
+                  />
                 )}
 
                 {/* Final Content */}
