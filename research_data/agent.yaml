@@ -1,2 +1,6 @@
 id: research_data
-entrypoint: research_data.agent:ResearchDataAgent
+name: Research & Data Agent
+entry_point: research_data.agent:ResearchDataAgent
+description: Gathers real research data from academic, web, and statistical sources
+input_keys: ["content_roadmap", "campaign_theme", "text"]
+output_keys: ["research_summary", "trending_topics", "statistics", "research_data"]

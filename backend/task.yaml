@@ -7,8 +7,8 @@ agents:
     output_keys: ["content_roadmap", "campaign_theme", "key_pillars"]
   research_data:
     spec_path: research_data.agent
-    input_keys: ["content_roadmap", "campaign_theme"]
-    output_keys: ["research_summary", "trending_topics", "statistics"]
+    input_keys: ["content_roadmap", "campaign_theme", "text"]
+    output_keys: ["research_summary", "trending_topics", "statistics", "research_data"]
   creative_writer:
     spec_path: creative_writer.agent
     input_keys: ["content_roadmap", "research_summary", "campaign_theme", "key_pillars"]
@@ -24,14 +24,14 @@ agents:
 
 workflow:
   name: "Content Generation Pipeline"
-  description: "End-to-end content creation workflow"
+  description: "End-to-end content creation workflow with real research data"
   stages:
     - agent: content_strategist
       name: "Strategic Planning"
       description: "Generate content strategy and roadmap"
     - agent: research_data
       name: "Research & Data Collection"
-      description: "Gather relevant data and trending topics"
+      description: "Gather real data from academic, web, and statistical sources"
     - agent: creative_writer
       name: "Content Creation"
       description: "Write engaging content based on strategy and research"

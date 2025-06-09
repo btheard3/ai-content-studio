@@ -41,13 +41,18 @@ class AgentRequest(BaseModel):
 
 @app.post("/run_workflow")
 def run_workflow(request: WorkflowRequest):
-    """Execute the complete multi-agent workflow"""
+    """Execute the complete multi-agent workflow with real research data"""
     try:
         print(f"🚀 Starting workflow with input: {request.text[:100]}...")
         result = executor.run_workflow(request.text)
         
         if result.success:
             print("✅ Workflow completed successfully")
+            
+            # Log research data if available
+            if 'research_summary' in result.context:
+                print(f"📊 Research completed: {len(result.context.get('research_data', {}).get('results', []))} sources found")
+            
             return {
                 "success": True,
                 "data": result.context,
@@ -108,6 +113,38 @@ def list_agents():
         print(f"❌ Error listing agents: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/test/research")
+def test_research_endpoint():
+    """Test endpoint to verify research functionality"""
+    try:
+        from backend.research_service import ResearchService
+        import asyncio
+        
+        async def test_research():
+            async with ResearchService() as service:
+                results = await service.search(
+                    query="artificial intelligence",
+                    filters={'sources': ['academic', 'web'], 'min_relevance': 0.3}
+                )
+                return results
+        
+        results = asyncio.run(test_research())
+        
+        return {
+            "success": True,
+            "message": "Research system is working",
+            "total_results": results.get('total_results', 0),
+            "sources": results.get('sources_searched', []),
+            "sample_results": results.get('results', [])[:2]  # First 2 results
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "message": "Research system test failed"
+        }
+
 @app.get("/")
 def read_root():
     return {
@@ -118,7 +155,8 @@ def read_root():
             "single_agent": "/run/{agent_id}",
             "workflow_info": "/workflow/info",
             "agents": "/agents",
-            "research": "/api/research/*"
+            "research": "/api/research/*",
+            "test_research": "/test/research"
         }
     }
 
