@@ -1,82 +1,35 @@
-import random
+# research_data/agent.py
+
+import os
+from dotenv import load_dotenv
 from backend.agent_base import BaseAgent, AgentInput, AgentOutput
+from openai import OpenAI
+
+load_dotenv()
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 class ResearchDataAgent(BaseAgent):
-    def __init__(self):
-        super().__init__()
-        self.name = "Research & Data Agent"
-
-    def get_input_keys(self) -> list:
-        return ["content_roadmap", "campaign_theme"]
-
-    def get_output_keys(self) -> list:
-        return ["research_summary", "trending_topics", "statistics"]
-
     def run(self, input_data: AgentInput) -> AgentOutput:
         try:
-            content_roadmap = input_data.get("content_roadmap", "")
-            campaign_theme = input_data.get("campaign_theme", "General Content")
-            
-            # Mock research data generation (in a real implementation, this would call APIs)
-            trending_topics = [
-                "AI and Machine Learning trends",
-                "Sustainable business practices",
-                "Remote work optimization",
-                "Digital transformation strategies",
-                "Customer experience innovation"
-            ]
-            
-            # Generate mock statistics
-            statistics = {
-                "market_size": f"${random.randint(10, 500)}B market opportunity",
-                "growth_rate": f"{random.randint(15, 45)}% YoY growth",
-                "engagement_rate": f"{random.randint(3, 12)}% average engagement",
-                "conversion_potential": f"{random.randint(2, 8)}% conversion rate",
-                "audience_size": f"{random.randint(100, 900)}M potential reach"
-            }
-            
-            # Generate research summary
-            research_summary = f"""
-Research Summary for: {campaign_theme}
+            prompt = f"""
+            You are a research analyst. Based on the following content brief, gather and summarize the most relevant data points, statistics, or insights that can support the content campaign.
 
-Key Findings:
-• Market shows strong growth potential with {statistics['growth_rate']} growth
-• Target audience size estimated at {statistics['audience_size']} users
-• Current engagement rates average {statistics['engagement_rate']} in this space
-• Conversion opportunities around {statistics['conversion_potential']}
+            Brief: "{input_data.data.get('text', '')}"
 
-Trending Topics Analysis:
-{chr(10).join([f"• {topic}" for topic in trending_topics[:3]])}
+            Provide a bulleted summary of key research findings.
+            """
 
-Competitive Landscape:
-• High competition in traditional channels
-• Emerging opportunities in video and interactive content
-• Voice search optimization becoming critical
-• Mobile-first approach essential
+            response = client.chat.completions.create(
+                model="gpt-4",
+                messages=[
+                    {"role": "system", "content": "You are a helpful research analyst."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.7
+            )
 
-Recommendations:
-• Focus on authentic storytelling
-• Leverage user-generated content
-• Implement data-driven personalization
-• Optimize for multiple content formats
-
-Data Sources: Industry reports, social media analytics, search trends, competitor analysis
-"""
-
-            return AgentOutput.from_dict({
-                "research_summary": research_summary,
-                "trending_topics": trending_topics,
-                "statistics": statistics,
-                "status": "completed",
-                "agent": "Research & Data Agent"
-            })
+            output_text = response.choices[0].message.content.strip()
+            return AgentOutput.from_text(output_text)
 
         except Exception as e:
-            return AgentOutput.from_dict({
-                "research_summary": f"[ERROR] Research data collection failed: {str(e)}",
-                "trending_topics": ["Error in research"],
-                "statistics": {"error": "Data collection failed"},
-                "status": "error",
-                "agent": "Research & Data Agent",
-                "error": str(e)
-            })
+            return AgentOutput.from_text(f"[ERROR] Research agent failed: {str(e)}")
