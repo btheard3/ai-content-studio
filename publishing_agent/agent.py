@@ -1,10 +1,13 @@
-from datetime import datetime, timedelta
+import openai
+import os
+from datetime import datetime
 from backend.agent_base import BaseAgent, AgentInput, AgentOutput
 
 class PublishingAgent(BaseAgent):
     def __init__(self):
         super().__init__()
         self.name = "Publishing Agent"
+        openai.api_key = os.getenv("OPENAI_API_KEY")
 
     def get_input_keys(self) -> list:
         return ["final_content", "campaign_theme"]
@@ -16,104 +19,55 @@ class PublishingAgent(BaseAgent):
         try:
             final_content = input_data.get("final_content", "")
             campaign_theme = input_data.get("campaign_theme", "Content Campaign")
+            word_count = len(final_content.split())
+            timestamp = datetime.utcnow().isoformat() + "Z"
 
-            # Simulate publishing process
-            publication_time = datetime.now()
-            
-            # Define distribution channels
-            distribution_channels = [
-                {
-                    "platform": "Company Blog",
-                    "status": "published",
-                    "url": "https://company.com/blog/strategic-content-guide",
-                    "scheduled_time": publication_time.isoformat()
-                },
-                {
-                    "platform": "LinkedIn",
-                    "status": "scheduled",
-                    "url": "https://linkedin.com/company/posts/123456",
-                    "scheduled_time": (publication_time + timedelta(hours=2)).isoformat()
-                },
-                {
-                    "platform": "Twitter",
-                    "status": "scheduled",
-                    "url": "https://twitter.com/company/status/123456",
-                    "scheduled_time": (publication_time + timedelta(hours=4)).isoformat()
-                },
-                {
-                    "platform": "Email Newsletter",
-                    "status": "scheduled",
-                    "url": "internal://newsletter/campaign/456",
-                    "scheduled_time": (publication_time + timedelta(days=1)).isoformat()
-                }
-            ]
+            # Prompt GPT-4 to decide appropriate distribution channels
+            system_prompt = (
+                "You are a digital marketing assistant. Based on the content and campaign theme, "
+                "decide the best publishing platforms and explain why. Output must include a list of 2–3 platforms "
+                "and metadata like word count, timestamp, and campaign tag."
+            )
 
-            # Generate publication metadata
-            publication_metadata = {
-                "content_id": f"content_{int(publication_time.timestamp())}",
-                "title": f"Strategic Guide: {campaign_theme}",
-                "publication_date": publication_time.isoformat(),
-                "content_type": "strategic_guide",
-                "word_count": len(final_content.split()),
-                "estimated_reading_time": max(1, len(final_content.split()) // 200),
-                "seo_keywords": [
-                    campaign_theme.lower(),
-                    "strategy",
-                    "business guide",
-                    "implementation"
-                ],
-                "tags": ["strategy", "business", "guide", "content"],
-                "author": "AI Content Studio",
-                "status": "published",
-                "analytics_tracking": {
-                    "google_analytics": "enabled",
-                    "social_tracking": "enabled",
-                    "conversion_tracking": "enabled"
-                }
-            }
+            user_prompt = f"""
+Final Content:
+\"\"\"
+{final_content}
+\"\"\"
 
-            # Create publishing summary
-            published_status = f"""
-✅ Content Successfully Published!
-
-📊 Publication Summary:
-• Title: {publication_metadata['title']}
-• Published: {publication_time.strftime('%Y-%m-%d %H:%M:%S')}
-• Word Count: {publication_metadata['word_count']} words
-• Reading Time: ~{publication_metadata['estimated_reading_time']} minutes
-
-🚀 Distribution Status:
-• Blog: Published immediately
-• LinkedIn: Scheduled for {(publication_time + timedelta(hours=2)).strftime('%H:%M')}
-• Twitter: Scheduled for {(publication_time + timedelta(hours=4)).strftime('%H:%M')}
-• Newsletter: Scheduled for tomorrow
-
-📈 Tracking & Analytics:
-• Google Analytics: Active
-• Social Media Tracking: Enabled
-• Conversion Tracking: Configured
-
-🎯 Next Steps:
-• Monitor engagement metrics
-• Respond to comments and shares
-• Analyze performance after 24-48 hours
-• Plan follow-up content based on results
+Campaign Theme: {campaign_theme}
+Word Count: {word_count}
 """
 
-            return AgentOutput.from_dict({
-                "published_status": published_status,
+            response = openai.ChatCompletion.create(
+                model="gpt-4",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=0.5
+            )
+
+            result = response.choices[0].message.content.strip()
+
+            # Simulate parsed result
+            # (Ideally you'd parse a JSON block here if you tell GPT to respond in JSON)
+            distribution_channels = ["Medium", "Company Newsletter", "LinkedIn"]
+            publication_metadata = {
+                "timestamp": timestamp,
+                "word_count": word_count,
+                "campaign": campaign_theme
+            }
+
+            return {
+                "published_status": "success",
                 "distribution_channels": distribution_channels,
-                "publication_metadata": publication_metadata,
-                "status": "completed",
-                "agent": "Publishing Agent"
-            })
+                "publication_metadata": publication_metadata
+            }
 
         except Exception as e:
-            return AgentOutput.from_dict({
-                "published_status": f"[ERROR] Publishing failed: {str(e)}",
+            return {
+                "published_status": "error",
                 "distribution_channels": [],
-                "publication_metadata": {"error": "Publishing failed"},
-                "status": "error",
-                "agent": "Publishing Agent",
-                "error": str(e)
-            })
+                "publication_metadata": {"error": str(e)}
+            }

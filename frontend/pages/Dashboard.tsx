@@ -8,14 +8,41 @@ import {
 	Award,
 	Target,
 	BookOpen,
+	UploadCloud,
 } from "lucide-react";
 import ContentGenerationForm from "../components/ContentCard";
 import ResearchDataCard from "../components/ResearchDataCard";
 import CreativeWriterCard from "../components/CreativeWriterCard";
+import QualityControlCard from "../components/QualityControlCard";
+import PublishingCard from "../components/PublishingCard";
 import { useAgents } from "../context/AgentContext";
 
 const Dashboard: React.FC = () => {
 	const { agents, activeWorkflows, completedItems } = useAgents();
+
+	// Extract outputs and parse JSON if necessary
+	let qualityControlOutput = agents.find(
+		(a) => a.id === "quality_control"
+	)?.output;
+	let publishingOutput = agents.find(
+		(a) => a.id === "publishing_agent"
+	)?.output;
+
+	try {
+		qualityControlOutput =
+			typeof qualityControlOutput === "string"
+				? JSON.parse(qualityControlOutput)
+				: qualityControlOutput;
+
+		publishingOutput =
+			typeof publishingOutput === "string"
+				? JSON.parse(publishingOutput)
+				: publishingOutput;
+	} catch (e) {
+		console.error("Failed to parse agent output:", e);
+		qualityControlOutput = null;
+		publishingOutput = null;
+	}
 
 	const kpiCards = [
 		{
@@ -103,7 +130,7 @@ const Dashboard: React.FC = () => {
 			<motion.div
 				className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
 				variants={containerVariants}>
-				{kpiCards.map((kpi, index) => (
+				{kpiCards.map((kpi) => (
 					<motion.div
 						key={kpi.title}
 						className="card relative overflow-hidden group"
@@ -134,7 +161,7 @@ const Dashboard: React.FC = () => {
 				))}
 			</motion.div>
 
-			{/* Content Creation Form */}
+			{/* Content Generator */}
 			<motion.div className="mb-8" variants={itemVariants}>
 				<div className="flex items-center gap-3 mb-6">
 					<div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
@@ -147,7 +174,7 @@ const Dashboard: React.FC = () => {
 				<ContentGenerationForm />
 			</motion.div>
 
-			{/* Research Agent Card Section */}
+			{/* Research Agent */}
 			<motion.div className="mb-8" variants={itemVariants}>
 				<div className="flex items-center gap-3 mb-6">
 					<div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center">
@@ -160,71 +187,43 @@ const Dashboard: React.FC = () => {
 				<ResearchDataCard />
 			</motion.div>
 
-			{/* Agent Network Status */}
-			<motion.div className="card" variants={itemVariants}>
-				<div className="flex items-center gap-3 mb-6">
-					<div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center">
-						<Users className="w-5 h-5 text-white" />
+			{/* Quality Control Card */}
+			{qualityControlOutput && (
+				<motion.div className="mb-8" variants={itemVariants}>
+					<div className="flex items-center gap-3 mb-4">
+						<div className="w-8 h-8 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-lg flex items-center justify-center">
+							<Award className="w-5 h-5 text-white" />
+						</div>
+						<h3 className="text-xl font-bold text-gray-800">
+							Quality Control Results
+						</h3>
 					</div>
-					<h3 className="text-xl font-bold text-gray-800">
-						Agent Network Status
-					</h3>
-				</div>
-
-				<motion.div
-					className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-					variants={containerVariants}>
-					{agents.map((agent, index) => (
-						<motion.div
-							key={agent.id}
-							className="p-4 border-2 border-gray-100 rounded-xl group relative overflow-hidden hover:shadow-md"
-							variants={itemVariants}>
-							<div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-purple-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-							<div className="relative z-10">
-								<div className="flex items-center justify-between mb-3">
-									<h4 className="font-semibold text-gray-800">{agent.name}</h4>
-									<span
-										className={`px-3 py-1 text-xs font-medium rounded-full ${
-											agent.status === "active"
-												? "bg-emerald-100 text-emerald-700"
-												: "bg-gray-100 text-gray-700"
-										}`}>
-										{agent.status}
-									</span>
-								</div>
-								<div className="grid grid-cols-3 gap-3 text-sm">
-									<div className="text-center">
-										<p className="font-semibold text-gray-800">
-											{agent.tasksCompleted}
-										</p>
-										<p className="text-gray-500 text-xs">Tasks</p>
-									</div>
-									<div className="text-center">
-										<p className="font-semibold text-gray-800">
-											{(agent.successRate * 100).toFixed(0)}%
-										</p>
-										<p className="text-gray-500 text-xs">Success</p>
-									</div>
-									<div className="text-center">
-										<p className="font-semibold text-gray-800">
-											{agent.avgCompletionTime}min
-										</p>
-										<p className="text-gray-500 text-xs">Avg Time</p>
-									</div>
-								</div>
-								<div className="mt-3 w-full bg-gray-200 rounded-full h-2">
-									<motion.div
-										className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"
-										initial={{ width: 0 }}
-										animate={{ width: `${agent.successRate * 100}%` }}
-										transition={{ delay: 0.3 + index * 0.1, duration: 1 }}
-									/>
-								</div>
-							</div>
-						</motion.div>
-					))}
+					<QualityControlCard
+						quality_score={qualityControlOutput.quality_score}
+						final_content={qualityControlOutput.final_content}
+						improvements_made={qualityControlOutput.improvements_made}
+					/>
 				</motion.div>
-			</motion.div>
+			)}
+
+			{/* Publishing Summary Card */}
+			{publishingOutput && (
+				<motion.div className="mb-8" variants={itemVariants}>
+					<div className="flex items-center gap-3 mb-4">
+						<div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center">
+							<UploadCloud className="w-5 h-5 text-white" />
+						</div>
+						<h3 className="text-xl font-bold text-gray-800">
+							Publishing Summary
+						</h3>
+					</div>
+					<PublishingCard
+						published_status={publishingOutput.published_status}
+						distribution_channels={publishingOutput.distribution_channels}
+						publication_metadata={publishingOutput.publication_metadata}
+					/>
+				</motion.div>
+			)}
 		</motion.div>
 	);
 };
