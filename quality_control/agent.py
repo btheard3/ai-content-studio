@@ -24,15 +24,15 @@ class QualityControlAgent(BaseAgent):
             campaign_theme = input_data.get("campaign_theme", "Content Campaign")
 
             if not creative_draft:
-                return AgentOutput(
-                    output={
+                return AgentOutput.from_dict({
+                    "output": {
                         "final_content": "No content provided for quality review",
                         "quality_score": 0,
                         "improvements_made": ["Error: No content to review"]
                     },
-                    status="error",
-                    agent=self.name
-                )
+                    "status": "error",
+                    "agent": self.name
+                })
 
             system_prompt = (
                 "You are a professional content editor and quality assurance specialist. "
@@ -79,27 +79,27 @@ IMPROVEMENTS:
             content = response.choices[0].message.content.strip()
             final_content, quality_score, improvements_made = self._parse_response(content, creative_draft)
 
-            return AgentOutput(
-                output={
+            return AgentOutput.from_dict({
+                "output": {
                     "final_content": final_content,
                     "quality_score": quality_score,
                     "improvements_made": improvements_made
                 },
-                status="completed",
-                agent=self.name
-            )
+                "status": "completed",
+                "agent": self.name
+            })
 
         except Exception as e:
-            return AgentOutput(
-                output={
+            return AgentOutput.from_dict({
+                "output": {
                     "final_content": creative_draft or "Error during quality review",
                     "quality_score": 5,
                     "improvements_made": [f"Exception: {str(e)}"]
                 },
-                status="error",
-                agent=self.name,
-                error=str(e)
-            )
+                "status": "error",
+                "agent": self.name,
+                "error": str(e)
+            })
 
     def _parse_response(self, content: str, fallback_content: str) -> tuple:
         try:
@@ -140,3 +140,4 @@ IMPROVEMENTS:
 
         except Exception as e:
             return fallback_content, 7, [f"Parsing error: {str(e)}"]
+

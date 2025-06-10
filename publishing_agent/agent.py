@@ -24,8 +24,8 @@ class PublishingAgent(BaseAgent):
             campaign_theme = input_data.get("campaign_theme", "Content Campaign")
 
             if not final_content:
-                return AgentOutput(
-                    output={
+                return AgentOutput.from_dict({
+                    "output": {
                         "published_status": "Failed - No content to publish",
                         "distribution_channels": [],
                         "publication_metadata": {
@@ -35,9 +35,9 @@ class PublishingAgent(BaseAgent):
                             "error": "No content provided"
                         }
                     },
-                    status="error",
-                    agent=self.name
-                )
+                    "status": "error",
+                    "agent": self.name
+                })
 
             word_count = len(final_content.split())
             timestamp = datetime.utcnow().isoformat() + "Z"
@@ -83,19 +83,19 @@ Return channels only as comma-separated list.
                 "content_type": self._determine_content_type(final_content)
             }
 
-            return AgentOutput(
-                output={
+            return AgentOutput.from_dict({
+                "output": {
                     "published_status": "Successfully published to all channels",
                     "distribution_channels": distribution_channels,
                     "publication_metadata": publication_metadata
                 },
-                status="completed",
-                agent=self.name
-            )
+                "status": "completed",
+                "agent": self.name
+            })
 
         except Exception as e:
-            return AgentOutput(
-                output={
+            return AgentOutput.from_dict({
+                "output": {
                     "published_status": "Publishing failed",
                     "distribution_channels": [],
                     "publication_metadata": {
@@ -105,10 +105,10 @@ Return channels only as comma-separated list.
                         "error": str(e)
                     }
                 },
-                status="error",
-                agent=self.name,
-                error=str(e)
-            )
+                "status": "error",
+                "agent": self.name,
+                "error": str(e)
+            })
 
     def _get_fallback_channels(self, content: str, word_count: int) -> list:
         channels = ["Company Blog", "LinkedIn"]
