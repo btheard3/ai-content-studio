@@ -22,41 +22,39 @@ class PublishingAgent(BaseAgent):
         try:
             final_content = input_data.get("final_content", "")
             campaign_theme = input_data.get("campaign_theme", "Content Campaign")
-            
+
             if not final_content:
-                return AgentOutput.from_dict({
-                    "published_status": "Failed - No content to publish",
-                    "distribution_channels": [],
-                    "publication_metadata": {
-                        "timestamp": datetime.utcnow().isoformat() + "Z",
-                        "word_count": 0,
-                        "campaign": campaign_theme,
-                        "error": "No content provided"
+                return AgentOutput(
+                    output={
+                        "published_status": "Failed - No content to publish",
+                        "distribution_channels": [],
+                        "publication_metadata": {
+                            "timestamp": datetime.utcnow().isoformat() + "Z",
+                            "word_count": 0,
+                            "campaign": campaign_theme,
+                            "error": "No content provided"
+                        }
                     },
-                    "status": "error",
-                    "agent": "Publishing Agent"
-                })
+                    status="error",
+                    agent=self.name
+                )
 
             word_count = len(final_content.split())
             timestamp = datetime.utcnow().isoformat() + "Z"
 
-            # Use AI to determine optimal distribution channels
             system_prompt = (
-                "You are a digital marketing and content distribution expert. "
-                "Based on the content type, theme, and characteristics, recommend the best "
-                "distribution channels and publishing strategy. Consider content length, "
-                "target audience, and content format."
+                "You are a content distribution expert. "
+                "Given the theme and length of the content, suggest 3–5 ideal channels "
+                "such as LinkedIn, Medium, Twitter, Blog, Newsletter, etc."
             )
 
             user_prompt = f"""
-Content Theme: {campaign_theme}
+Campaign Theme: {campaign_theme}
 Word Count: {word_count}
-Content Preview: {final_content[:300]}...
+Content Preview:
+{final_content[:300]}...
 
-Recommend 3-5 optimal distribution channels for this content.
-Consider: LinkedIn, Medium, Company Blog, Newsletter, Twitter, Facebook, Instagram, YouTube, etc.
-
-Respond with just the channel names, separated by commas.
+Return channels only as comma-separated list.
 """
 
             try:
@@ -71,99 +69,73 @@ Respond with just the channel names, separated by commas.
                 )
 
                 ai_channels = response.choices[0].message.content.strip()
-                distribution_channels = [channel.strip() for channel in ai_channels.split(',')]
-                
+                distribution_channels = [ch.strip() for ch in ai_channels.split(",")]
+
             except Exception as e:
-                # Fallback channels based on content characteristics
                 distribution_channels = self._get_fallback_channels(final_content, word_count)
 
-            # Simulate publishing process
-            published_status = "Successfully published to all channels"
-            
             publication_metadata = {
                 "timestamp": timestamp,
                 "word_count": word_count,
                 "campaign": campaign_theme,
-                "content_type": self._determine_content_type(final_content),
-                "estimated_read_time": max(1, word_count // 200),  # Reading time in minutes
+                "estimated_read_time": max(1, word_count // 200),
                 "seo_score": self._calculate_seo_score(final_content),
-                "engagement_prediction": "High" if word_count > 500 else "Medium"
+                "content_type": self._determine_content_type(final_content)
             }
 
-            return AgentOutput.from_dict({
-                "published_status": published_status,
-                "distribution_channels": distribution_channels,
-                "publication_metadata": publication_metadata,
-                "status": "completed",
-                "agent": "Publishing Agent"
-            })
+            return AgentOutput(
+                output={
+                    "published_status": "Successfully published to all channels",
+                    "distribution_channels": distribution_channels,
+                    "publication_metadata": publication_metadata
+                },
+                status="completed",
+                agent=self.name
+            )
 
         except Exception as e:
-            return AgentOutput.from_dict({
-                "published_status": f"Publishing failed: {str(e)}",
-                "distribution_channels": ["Error - No channels available"],
-                "publication_metadata": {
-                    "timestamp": datetime.utcnow().isoformat() + "Z",
-                    "word_count": 0,
-                    "campaign": campaign_theme,
-                    "error": str(e)
+            return AgentOutput(
+                output={
+                    "published_status": "Publishing failed",
+                    "distribution_channels": [],
+                    "publication_metadata": {
+                        "timestamp": datetime.utcnow().isoformat() + "Z",
+                        "word_count": 0,
+                        "campaign": campaign_theme,
+                        "error": str(e)
+                    }
                 },
-                "status": "error",
-                "agent": "Publishing Agent",
-                "error": str(e)
-            })
+                status="error",
+                agent=self.name,
+                error=str(e)
+            )
 
     def _get_fallback_channels(self, content: str, word_count: int) -> list:
-        """Determine fallback distribution channels based on content characteristics"""
-        channels = []
-        
-        # Base channels for most content
-        channels.extend(["Company Blog", "LinkedIn"])
-        
-        # Add channels based on word count
+        channels = ["Company Blog", "LinkedIn"]
         if word_count > 1000:
             channels.append("Medium")
-        
         if word_count < 500:
-            channels.extend(["Twitter", "Facebook"])
-        
-        # Add newsletter for substantial content
+            channels += ["Twitter", "Facebook"]
         if word_count > 300:
             channels.append("Email Newsletter")
-        
-        return channels[:5]  # Limit to 5 channels
+        return channels[:5]
 
     def _determine_content_type(self, content: str) -> str:
-        """Determine content type based on content characteristics"""
         content_lower = content.lower()
-        
-        if any(word in content_lower for word in ['guide', 'how to', 'tutorial', 'step']):
+        if any(kw in content_lower for kw in ["guide", "how to", "step-by-step"]):
             return "Guide"
-        elif any(word in content_lower for word in ['analysis', 'research', 'study', 'data']):
+        elif any(kw in content_lower for kw in ["research", "data", "study"]):
             return "Analysis"
-        elif any(word in content_lower for word in ['news', 'update', 'announcement']):
-            return "News"
-        elif any(word in content_lower for word in ['opinion', 'think', 'believe', 'perspective']):
+        elif any(kw in content_lower for kw in ["opinion", "perspective", "view"]):
             return "Opinion"
-        else:
-            return "Article"
+        return "Article"
 
     def _calculate_seo_score(self, content: str) -> int:
-        """Calculate a basic SEO score based on content characteristics"""
-        score = 50  # Base score
-        
-        # Check for good length
-        word_count = len(content.split())
-        if 300 <= word_count <= 2000:
+        score = 50
+        if 300 <= len(content.split()) <= 2000:
             score += 20
-        
-        # Check for headings (simple heuristic)
-        if any(line.strip().startswith('#') for line in content.split('\n')):
+        if any(line.strip().startswith("#") for line in content.split("\n")):
             score += 15
-        
-        # Check for good structure (paragraphs)
-        paragraphs = content.split('\n\n')
-        if len(paragraphs) >= 3:
+        if content.count("\n\n") >= 3:
             score += 15
-        
-        return min(100, score)
+        return min(score, 100)

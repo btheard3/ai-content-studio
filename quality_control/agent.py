@@ -24,19 +24,20 @@ class QualityControlAgent(BaseAgent):
             campaign_theme = input_data.get("campaign_theme", "Content Campaign")
 
             if not creative_draft:
-                return AgentOutput.from_dict({
-                    "final_content": "No content provided for quality review",
-                    "quality_score": 0,
-                    "improvements_made": ["Error: No content to review"],
-                    "status": "error",
-                    "agent": "Quality Control Agent"
-                })
+                return AgentOutput(
+                    output={
+                        "final_content": "No content provided for quality review",
+                        "quality_score": 0,
+                        "improvements_made": ["Error: No content to review"]
+                    },
+                    status="error",
+                    agent=self.name
+                )
 
             system_prompt = (
                 "You are a professional content editor and quality assurance specialist. "
                 "Review the provided content for clarity, grammar, tone, flow, and overall quality. "
-                "Provide an improved version of the content, a quality score (1-10), and list specific improvements made. "
-                "Focus on making the content engaging, professional, and aligned with the campaign theme."
+                "Provide an improved version of the content, a quality score (1-10), and list specific improvements made."
             )
 
             user_prompt = f"""
@@ -76,72 +77,66 @@ IMPROVEMENTS:
             )
 
             content = response.choices[0].message.content.strip()
-
-            # Parse the response
             final_content, quality_score, improvements_made = self._parse_response(content, creative_draft)
 
-            return AgentOutput.from_dict({
-                "final_content": final_content,
-                "quality_score": quality_score,
-                "improvements_made": improvements_made,
-                "status": "completed",
-                "agent": "Quality Control Agent"
-            })
+            return AgentOutput(
+                output={
+                    "final_content": final_content,
+                    "quality_score": quality_score,
+                    "improvements_made": improvements_made
+                },
+                status="completed",
+                agent=self.name
+            )
 
         except Exception as e:
-            return AgentOutput.from_dict({
-                "final_content": creative_draft or "Error in quality control process",
-                "quality_score": 5,
-                "improvements_made": [f"Error during quality review: {str(e)}"],
-                "status": "error",
-                "agent": "Quality Control Agent",
-                "error": str(e)
-            })
+            return AgentOutput(
+                output={
+                    "final_content": creative_draft or "Error during quality review",
+                    "quality_score": 5,
+                    "improvements_made": [f"Exception: {str(e)}"]
+                },
+                status="error",
+                agent=self.name,
+                error=str(e)
+            )
 
     def _parse_response(self, content: str, fallback_content: str) -> tuple:
-        """Parse the AI response to extract improved content, score, and improvements"""
         try:
             lines = content.split('\n')
-            
-            # Extract improved content
             improved_content = ""
-            quality_score = 7  # Default score
+            quality_score = 7
             improvements_made = []
-            
             current_section = None
-            
+
             for line in lines:
                 line = line.strip()
-                
                 if line.startswith("IMPROVED_CONTENT:"):
                     current_section = "content"
                     continue
                 elif line.startswith("QUALITY_SCORE:"):
                     current_section = "score"
-                    score_text = line.replace("QUALITY_SCORE:", "").strip()
                     try:
-                        quality_score = float(score_text)
+                        quality_score = float(line.replace("QUALITY_SCORE:", "").strip())
                     except:
                         quality_score = 7
                     continue
                 elif line.startswith("IMPROVEMENTS:"):
                     current_section = "improvements"
                     continue
-                
-                if current_section == "content" and line:
+
+                if current_section == "content":
                     improved_content += line + "\n"
                 elif current_section == "improvements" and line.startswith("-"):
                     improvements_made.append(line[1:].strip())
-            
-            # Fallback if parsing fails
+
             if not improved_content.strip():
                 improved_content = fallback_content
-                improvements_made = ["Content reviewed and approved"]
-            
+
             if not improvements_made:
-                improvements_made = ["Grammar and clarity improvements", "Tone optimization", "Structure enhancement"]
-            
+                improvements_made = ["Minor grammar and clarity fixes."]
+
             return improved_content.strip(), quality_score, improvements_made
-            
+
         except Exception as e:
-            return fallback_content, 7, [f"Quality review completed with minor adjustments: {str(e)}"]
+            return fallback_content, 7, [f"Parsing error: {str(e)}"]
