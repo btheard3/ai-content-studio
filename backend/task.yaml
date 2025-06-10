@@ -1,42 +1,50 @@
+# Multi-agent content generation workflow configuration
+entry_point: "content_generation_workflow"
+
 agents:
-  - id: content_strategist
-    path: content_strategist/agent.yaml
+  content_strategist:
+    spec_path: "content_strategist/agent.py"
+    input_keys: ["text"]
+    output_keys: ["content_roadmap", "campaign_theme", "key_pillars"]
+    
+  research_data:
+    spec_path: "research_data/agent.py"
+    input_keys: ["content_roadmap", "campaign_theme", "text"]
+    output_keys: ["research_summary", "trending_topics", "statistics", "research_data"]
+    
+  creative_writer:
+    spec_path: "creative_writer/agent.py"
+    input_keys: ["content_roadmap", "research_summary", "campaign_theme", "key_pillars"]
+    output_keys: ["creative_draft", "content_sections", "tone_analysis"]
+    
+  quality_control:
+    spec_path: "quality_control/agent.py"
+    input_keys: ["creative_draft", "content_sections", "campaign_theme"]
+    output_keys: ["final_content", "quality_score", "improvements_made"]
+    
+  publishing_agent:
+    spec_path: "publishing_agent/agent.py"
+    input_keys: ["final_content", "campaign_theme"]
+    output_keys: ["published_status", "distribution_channels", "publication_metadata"]
 
-  - id: research_data
-    path: research_data/agent.yaml
-
-  - id: creative_writer
-    path: creative_writer/agent.yaml
-
-  - id: quality_control
-    path: quality_control/agent.yaml
-
-  - id: publishing_agent
-    path: publishing_agent/agent.yaml
-
-dag:
-  - id: run_content_pipeline
-    steps:
-      - id: step1
-        agent_id: content_strategist
-        input: {}
-      - id: step2
-        agent_id: research_data
-        input:
-          strategy: step1.strategy
-      - id: step3
-        agent_id: creative_writer
-        input:
-          strategy: step1.strategy
-          research: step2.research
-      - id: step4
-        agent_id: quality_control
-        input:
-          creative_draft: step3.creative_draft
-          content_sections: step3.sections
-          campaign_theme: step1.strategy.theme
-      - id: step5
-        agent_id: publishing_agent
-        input:
-          final_content: step4.final_content
-          campaign_theme: step1.strategy.theme
+workflow:
+  stages:
+    - agent: content_strategist
+      name: "Strategic Planning"
+      description: "Generate content strategy and campaign theme"
+      
+    - agent: research_data
+      name: "Research & Data Collection"
+      description: "Gather relevant research and data"
+      
+    - agent: creative_writer
+      name: "Creative Content Writing"
+      description: "Create engaging content based on strategy and research"
+      
+    - agent: quality_control
+      name: "Quality Assurance"
+      description: "Review and improve content quality"
+      
+    - agent: publishing_agent
+      name: "Publishing & Distribution"
+      description: "Format and distribute final content"

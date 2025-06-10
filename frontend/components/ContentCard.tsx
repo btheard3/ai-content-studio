@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Sparkles, 
@@ -16,7 +15,10 @@ import {
   Eye,
   TrendingUp
 } from "lucide-react";
+import { useApi, apiService } from "../hooks/useApi";
+import { useAgents } from "../context/AgentContext";
 import CreativeWriterCard from "./CreativeWriterCard";
+import LoadingSpinner from "./LoadingSpinner";
 
 interface WorkflowStage {
   agent_id: string;
@@ -36,32 +38,35 @@ interface WorkflowResponse {
 
 const ContentGenerationForm = () => {
   const [input, setInput] = useState("");
-  const [workflowResult, setWorkflowResult] = useState<WorkflowResponse | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [isExpanded, setIsExpanded] = useState(false);
+  const { addWorkflowResult } = useAgents();
+  
+  const {
+    data: workflowResult,
+    loading,
+    error,
+    execute: runWorkflow,
+    reset
+  } = useApi<WorkflowResponse>(apiService.runWorkflow);
 
-  const runWorkflow = async () => {
+  const handleSubmit = async () => {
     if (!input.trim()) return;
 
-    setLoading(true);
-    setError("");
-    setWorkflowResult(null);
+    const result = await runWorkflow({
+      text: input,
+      workflow_type: "content_generation"
+    });
 
-    try {
-      const response = await axios.post("http://localhost:8000/run_workflow", {
-        text: input,
-        workflow_type: "content_generation"
-      });
-
-      setWorkflowResult(response.data);
+    if (result?.success) {
+      addWorkflowResult(result);
       setIsExpanded(true);
-    } catch (err: any) {
-      const errorMessage = err?.response?.data?.detail || err?.response?.data?.error || "Network Error";
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
     }
+  };
+
+  const handleReset = () => {
+    reset();
+    setInput("");
+    setIsExpanded(false);
   };
 
   const getStageIcon = (status: string) => {
@@ -166,6 +171,7 @@ const ContentGenerationForm = () => {
             placeholder="Describe your content needs in detail... e.g., 'Create a comprehensive guide about AI implementation in healthcare for C-suite executives, focusing on ROI, implementation strategies, and risk mitigation.'"
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            disabled={loading}
           />
           <div className="absolute bottom-3 right-3 text-xs text-gray-400">
             {input.length}/500
@@ -176,7 +182,7 @@ const ContentGenerationForm = () => {
       {/* Action Buttons */}
       <div className="flex items-center gap-3 mb-6">
         <motion.button
-          onClick={runWorkflow}
+          onClick={handleSubmit}
           disabled={loading || !input.trim()}
           className="flex items-center px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-lg"
           whileHover={{ scale: 1.02, y: -1 }}
@@ -195,9 +201,9 @@ const ContentGenerationForm = () => {
           )}
         </motion.button>
 
-        {workflowResult && (
+        {(workflowResult || error) && (
           <motion.button
-            onClick={() => setWorkflowResult(null)}
+            onClick={handleReset}
             className="flex items-center px-4 py-3 bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-200 transition-all duration-300 font-medium"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -209,6 +215,18 @@ const ContentGenerationForm = () => {
           </motion.button>
         )}
       </div>
+
+      {/* Loading State */}
+      {loading && (
+        <motion.div
+          className="mb-6 p-8 border-2 border-blue-200 bg-blue-50 rounded-xl"
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          transition={{ duration: 0.3 }}
+        >
+          <LoadingSpinner size="lg" text="Processing your content request through our AI agents..." />
+        </motion.div>
+      )}
 
       {/* Error Display */}
       <AnimatePresence>
@@ -383,7 +401,7 @@ const ContentGenerationForm = () => {
                 {/* Final Content */}
                 {workflowResult.data.final_content && (
                   <motion.div 
-                    className="p-4 border-2 border-gray-200 bg-gray-50 rounded-xl"
+                    className="p-4 border-2 border-gray-200 bg-gray-50 rounded-xl relative"
                     whileHover={{ scale: 1.005 }}
                   >
                     <h5 className="font-semibold text-gray-800 mb-3 flex items-center justify-between">
@@ -421,7 +439,7 @@ const ContentGenerationForm = () => {
                           animate={{ scale: 1 }}
                           transition={{ delay: 0.7, type: "spring" }}
                         >
-                          {workflowResult.data.quality_score}%
+                          {Math.round(workflowResult.data.quality_score * 10)}%
                         </motion.span>
                         <span className="ml-2 text-emerald-600">Quality Score</span>
                       </div>
@@ -429,7 +447,7 @@ const ContentGenerationForm = () => {
                         <motion.div
                           className="h-full bg-emerald-500 rounded-full"
                           initial={{ width: 0 }}
-                          animate={{ width: `${workflowResult.data.quality_score}%` }}
+                          animate={{ width: `${workflowResult.data.quality_score * 10}%` }}
                           transition={{ delay: 0.8, duration: 1 }}
                         />
                       </div>

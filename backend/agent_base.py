@@ -53,6 +53,11 @@ class AgentOutput:
 
     def update_context(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Update the workflow context with this agent's output"""
+        # Ensure context is a dictionary
+        if not isinstance(context, dict):
+            context = {}
+        
+        # Update context with agent output data
         context.update(self.data)
         return context
 
