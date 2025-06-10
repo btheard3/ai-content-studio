@@ -32,6 +32,11 @@ agents:
     input_keys: ["text"]
     output_keys: ["video_url", "status", "video_id", "processing_time"]
 
+  code_generator_agent:
+    spec_path: "backend/code_generator/agent.py"
+    input_keys: ["description", "language", "framework", "complexity", "include_tests"]
+    output_keys: ["generated_code", "test_files", "documentation", "setup_instructions", "api_docs"]
+
 workflow:
   stages:
     - agent: content_strategist
@@ -59,3 +64,9 @@ video_workflow:
     - agent: elai_video_agent
       name: "Video Generation"
       description: "Generate video from text using Elai AI"
+
+code_workflow:
+  stages:
+    - agent: code_generator_agent
+      name: "Code Generation"
+      description: "Generate clean, documented code in multiple languages"

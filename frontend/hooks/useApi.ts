@@ -81,6 +81,17 @@ export const apiService = {
     return response.data;
   },
 
+  generateCode: async (data: {
+    description: string;
+    language: string;
+    framework?: string;
+    complexity?: string;
+    include_tests?: boolean;
+  }) => {
+    const response = await axios.post('http://localhost:8000/generate_code', data);
+    return response.data;
+  },
+
   searchResearch: async (data: {
     query: string;
     filters?: any;
@@ -119,6 +130,16 @@ export const apiService = {
 
   getVideoVoices: async () => {
     const response = await axios.get('http://localhost:8000/video/voices');
+    return response.data;
+  },
+
+  getCodeTemplates: async () => {
+    const response = await axios.get('http://localhost:8000/code/templates');
+    return response.data;
+  },
+
+  getCodeHistory: async () => {
+    const response = await axios.get('http://localhost:8000/code/history');
     return response.data;
   },
 };

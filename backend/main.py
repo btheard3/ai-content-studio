@@ -44,6 +44,13 @@ class VideoRequest(BaseModel):
     template_id: str = None
     voice_id: str = None
 
+class CodeRequest(BaseModel):
+    description: str
+    language: str = "python"
+    framework: str = ""
+    complexity: str = "medium"
+    include_tests: bool = True
+
 @app.post("/run_workflow")
 def run_workflow(request: WorkflowRequest):
     """Execute the complete multi-agent workflow with real research data"""
@@ -138,6 +145,68 @@ def generate_video(request: VideoRequest):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=error_msg)
 
+@app.post("/generate_code")
+def generate_code(request: CodeRequest):
+    """Generate code using AI Code Generator"""
+    try:
+        print(f"💻 Starting code generation: {request.description[:100]}...")
+        
+        # Import the code generator agent
+        import sys
+        import os
+        sys.path.append(os.path.join(os.path.dirname(__file__)))
+        
+        from code_generator.agent import CodeGeneratorAgent
+        from backend.agent_base import AgentInput
+        
+        # Create agent instance and run
+        agent = CodeGeneratorAgent()
+        input_data = AgentInput({
+            "description": request.description,
+            "language": request.language,
+            "framework": request.framework,
+            "complexity": request.complexity,
+            "include_tests": request.include_tests
+        })
+        
+        result = agent.run(input_data)
+        
+        print(f"📊 Code generation result: {result.data.get('status')}")
+        
+        if result.data.get("status") == "completed":
+            print("✅ Code generation completed successfully")
+            return {
+                "success": True,
+                "generated_code": result.data.get("generated_code", {}),
+                "test_files": result.data.get("test_files", {}),
+                "documentation": result.data.get("documentation", ""),
+                "setup_instructions": result.data.get("setup_instructions", ""),
+                "api_docs": result.data.get("api_docs", ""),
+                "architecture": result.data.get("architecture", {}),
+                "language": result.data.get("language"),
+                "framework": result.data.get("framework"),
+                "status": "completed"
+            }
+        elif result.data.get("status") == "error":
+            print(f"❌ Code generation failed: {result.data.get('error')}")
+            return {
+                "success": False,
+                "error": result.data.get("error"),
+                "status": "error"
+            }
+        else:
+            return {
+                "success": False,
+                "error": "Code generation status unknown",
+                "status": result.data.get("status", "unknown")
+            }
+            
+    except Exception as e:
+        error_msg = f"Code generation error: {str(e)}"
+        print(f"💥 {error_msg}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=error_msg)
+
 @app.get("/video/templates")
 def get_video_templates():
     """Get available video templates with improved error handling"""
@@ -199,6 +268,95 @@ def get_video_voices():
                 {"id": "en-GB-1", "name": "Emma", "language": "English (UK)", "gender": "Female"},
                 {"id": "es-ES-1", "name": "Maria", "language": "Spanish", "gender": "Female"}
             ]
+        }
+
+@app.get("/code/templates")
+def get_code_templates():
+    """Get available code templates"""
+    try:
+        templates = [
+            {
+                "id": "rest_api",
+                "name": "REST API",
+                "description": "Basic CRUD API with authentication",
+                "language": "python",
+                "framework": "fastapi",
+                "complexity": "medium"
+            },
+            {
+                "id": "react_component",
+                "name": "React Component",
+                "description": "Reusable UI component with props and state",
+                "language": "typescript",
+                "framework": "react",
+                "complexity": "simple"
+            },
+            {
+                "id": "microservice",
+                "name": "Microservice",
+                "description": "Containerized microservice with health checks",
+                "language": "go",
+                "framework": "gin",
+                "complexity": "complex"
+            },
+            {
+                "id": "cli_tool",
+                "name": "CLI Tool",
+                "description": "Command-line utility with argument parsing",
+                "language": "rust",
+                "framework": "",
+                "complexity": "medium"
+            }
+        ]
+        
+        return {
+            "success": True,
+            "templates": templates,
+            "count": len(templates)
+        }
+    except Exception as e:
+        print(f"❌ Error getting code templates: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "templates": []
+        }
+
+@app.get("/code/history")
+def get_code_history():
+    """Get code generation history"""
+    try:
+        # Mock history data - in a real app, this would come from a database
+        history = [
+            {
+                "id": "1",
+                "description": "Task Management API",
+                "language": "python",
+                "framework": "fastapi",
+                "created_at": "2024-01-15T10:30:00Z",
+                "files_count": 8
+            },
+            {
+                "id": "2",
+                "description": "React Dashboard Component",
+                "language": "typescript",
+                "framework": "react",
+                "created_at": "2024-01-14T15:45:00Z",
+                "files_count": 5
+            }
+        ]
+        
+        return {
+            "success": True,
+            "history": history,
+            "count": len(history)
+        }
+    except Exception as e:
+        print(f"❌ Error getting code history: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "history": []
         }
 
 @app.post("/video/clear_cache")
@@ -331,6 +489,32 @@ def test_video_endpoint():
             "message": "Video system test failed"
         }
 
+@app.get("/test/code")
+def test_code_endpoint():
+    """Test endpoint to verify code generation functionality"""
+    try:
+        import sys
+        import os
+        sys.path.append(os.path.join(os.path.dirname(__file__)))
+        
+        from code_generator.agent import CodeGeneratorAgent
+        
+        agent = CodeGeneratorAgent()
+        
+        return {
+            "success": True,
+            "message": "Code generation system test completed",
+            "supported_languages": list(agent.supported_languages.keys()),
+            "agent_name": agent.name
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "message": "Code generation system test failed"
+        }
+
 @app.get("/")
 def read_root():
     return {
@@ -340,14 +524,18 @@ def read_root():
             "workflow": "/run_workflow",
             "single_agent": "/run/{agent_id}",
             "video_generation": "/generate_video",
+            "code_generation": "/generate_code",
             "video_templates": "/video/templates",
             "video_voices": "/video/voices",
+            "code_templates": "/code/templates",
+            "code_history": "/code/history",
             "video_cache_clear": "/video/clear_cache",
             "workflow_info": "/workflow/info",
             "agents": "/agents",
             "research": "/api/research/*",
             "test_research": "/test/research",
-            "test_video": "/test/video"
+            "test_video": "/test/video",
+            "test_code": "/test/code"
         }
     }
 

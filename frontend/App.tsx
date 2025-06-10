@@ -7,7 +7,7 @@ import Analytics from "./pages/Analytics";
 import ContentWorkflow from "./pages/ContentWorkflow";
 import Settings from "./pages/Settings";
 import ResearchPage from "./pages/ResearchPage";
-import VideoPage from "./pages/VideoPage";
+import CodePage from "./pages/CodePage";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { AgentProvider } from "./context/AgentContext";
 
@@ -20,7 +20,7 @@ const App: React.FC = () => {
 						<Route path="/" element={<Dashboard />} />
 						<Route path="/workflow" element={<ContentWorkflow />} />
 						<Route path="/research" element={<ResearchPage />} />
-						<Route path="/video" element={<VideoPage />} />
+						<Route path="/code" element={<CodePage />} />
 						<Route path="/analytics" element={<Analytics />} />
 						<Route path="/settings" element={<Settings />} />
 					</Routes>
