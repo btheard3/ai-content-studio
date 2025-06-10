@@ -41,8 +41,8 @@ class AgentRequest(BaseModel):
 
 class VideoRequest(BaseModel):
     text: str
-    template_id: str = "default"
-    voice_id: str = "en-US-1"
+    template_id: str = None
+    voice_id: str = None
 
 @app.post("/run_workflow")
 def run_workflow(request: WorkflowRequest):
@@ -81,7 +81,7 @@ def run_workflow(request: WorkflowRequest):
 
 @app.post("/generate_video")
 def generate_video(request: VideoRequest):
-    """Generate video using Elai AI"""
+    """Generate video using Elai AI with improved error handling"""
     try:
         print(f"🎬 Starting video generation with text: {request.text[:100]}...")
         
@@ -103,6 +103,8 @@ def generate_video(request: VideoRequest):
         
         result = agent.run(input_data)
         
+        print(f"📊 Video generation result: {result.data.get('status')}")
+        
         if result.data.get("status") == "completed":
             print("✅ Video generation completed successfully")
             return {
@@ -110,6 +112,10 @@ def generate_video(request: VideoRequest):
                 "video_url": result.data.get("video_url"),
                 "video_id": result.data.get("video_id"),
                 "processing_time": result.data.get("processing_time"),
+                "template_used": result.data.get("template_used"),
+                "voice_used": result.data.get("voice_used"),
+                "demo_mode": result.data.get("demo_mode", False),
+                "message": result.data.get("message"),
                 "status": "completed"
             }
         elif result.data.get("status") == "error":
@@ -134,7 +140,7 @@ def generate_video(request: VideoRequest):
 
 @app.get("/video/templates")
 def get_video_templates():
-    """Get available video templates"""
+    """Get available video templates with improved error handling"""
     try:
         import sys
         import os
@@ -143,9 +149,13 @@ def get_video_templates():
         from elai_video.agent import ElaiVideoAgent
         agent = ElaiVideoAgent()
         templates = agent.get_video_templates()
+        
+        print(f"📋 Retrieved {len(templates)} templates")
+        
         return {
             "success": True,
-            "templates": templates
+            "templates": templates,
+            "count": len(templates)
         }
     except Exception as e:
         print(f"❌ Error getting templates: {e}")
@@ -161,7 +171,7 @@ def get_video_templates():
 
 @app.get("/video/voices")
 def get_video_voices():
-    """Get available video voices"""
+    """Get available video voices with improved error handling"""
     try:
         import sys
         import os
@@ -170,9 +180,13 @@ def get_video_voices():
         from elai_video.agent import ElaiVideoAgent
         agent = ElaiVideoAgent()
         voices = agent.get_available_voices()
+        
+        print(f"🎤 Retrieved {len(voices)} voices")
+        
         return {
             "success": True,
-            "voices": voices
+            "voices": voices,
+            "count": len(voices)
         }
     except Exception as e:
         print(f"❌ Error getting voices: {e}")
@@ -185,6 +199,29 @@ def get_video_voices():
                 {"id": "en-GB-1", "name": "Emma", "language": "English (UK)", "gender": "Female"},
                 {"id": "es-ES-1", "name": "Maria", "language": "Spanish", "gender": "Female"}
             ]
+        }
+
+@app.post("/video/clear_cache")
+def clear_video_cache():
+    """Clear video templates and voices cache"""
+    try:
+        import sys
+        import os
+        sys.path.append(os.path.join(os.path.dirname(__file__)))
+        
+        from elai_video.agent import ElaiVideoAgent
+        agent = ElaiVideoAgent()
+        agent.clear_cache()
+        
+        return {
+            "success": True,
+            "message": "Video cache cleared successfully"
+        }
+    except Exception as e:
+        print(f"❌ Error clearing cache: {e}")
+        return {
+            "success": False,
+            "error": str(e)
         }
 
 @app.post("/run/{agent_id}")
@@ -258,6 +295,42 @@ def test_research_endpoint():
             "message": "Research system test failed"
         }
 
+@app.get("/test/video")
+def test_video_endpoint():
+    """Test endpoint to verify video generation functionality"""
+    try:
+        import sys
+        import os
+        sys.path.append(os.path.join(os.path.dirname(__file__)))
+        
+        from elai_video.agent import ElaiVideoAgent
+        
+        agent = ElaiVideoAgent()
+        
+        # Test API key availability
+        api_key_status = "configured" if agent.api_key else "missing"
+        
+        # Test template fetching
+        templates = agent.get_video_templates()
+        voices = agent.get_available_voices()
+        
+        return {
+            "success": True,
+            "message": "Video system test completed",
+            "api_key_status": api_key_status,
+            "templates_available": len(templates),
+            "voices_available": len(voices),
+            "sample_templates": templates[:3] if templates else [],
+            "sample_voices": voices[:3] if voices else []
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "message": "Video system test failed"
+        }
+
 @app.get("/")
 def read_root():
     return {
@@ -269,10 +342,12 @@ def read_root():
             "video_generation": "/generate_video",
             "video_templates": "/video/templates",
             "video_voices": "/video/voices",
+            "video_cache_clear": "/video/clear_cache",
             "workflow_info": "/workflow/info",
             "agents": "/agents",
             "research": "/api/research/*",
-            "test_research": "/test/research"
+            "test_research": "/test/research",
+            "test_video": "/test/video"
         }
     }
 

@@ -12,7 +12,9 @@ import {
   Clock,
   FileVideo,
   Mic,
-  Palette
+  Palette,
+  RefreshCw,
+  Info
 } from 'lucide-react';
 import { useApi, apiService } from '../hooks/useApi';
 
@@ -38,15 +40,23 @@ interface VideoResponse {
   processing_time?: number;
   status: string;
   error?: string;
+  demo_mode?: boolean;
+  message?: string;
+  template_used?: string;
+  voice_used?: string;
 }
 
 const VideoCreatorCard: React.FC = () => {
   const [text, setText] = useState('');
-  const [selectedTemplate, setSelectedTemplate] = useState('default');
-  const [selectedVoice, setSelectedVoice] = useState('en-US-1');
+  const [selectedTemplate, setSelectedTemplate] = useState('');
+  const [selectedVoice, setSelectedVoice] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [templates, setTemplates] = useState<VideoTemplate[]>([]);
   const [voices, setVoices] = useState<Voice[]>([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
+  const [loadingVoices, setLoadingVoices] = useState(false);
+  const [templatesError, setTemplatesError] = useState('');
+  const [voicesError, setVoicesError] = useState('');
 
   const {
     data: videoResult,
@@ -62,22 +72,66 @@ const VideoCreatorCard: React.FC = () => {
   }, []);
 
   const loadTemplatesAndVoices = async () => {
-    try {
-      // Load templates
-      const templatesResponse = await fetch('http://localhost:8000/video/templates');
-      const templatesData = await templatesResponse.json();
-      if (templatesData.success) {
-        setTemplates(templatesData.templates);
-      }
+    await Promise.all([loadTemplates(), loadVoices()]);
+  };
 
-      // Load voices
-      const voicesResponse = await fetch('http://localhost:8000/video/voices');
-      const voicesData = await voicesResponse.json();
-      if (voicesData.success) {
-        setVoices(voicesData.voices);
+  const loadTemplates = async () => {
+    try {
+      setLoadingTemplates(true);
+      setTemplatesError('');
+      
+      const response = await fetch('http://localhost:8000/video/templates');
+      const data = await response.json();
+      
+      if (data.success && data.templates) {
+        setTemplates(data.templates);
+        
+        // Auto-select first template if none selected
+        if (data.templates.length > 0 && !selectedTemplate) {
+          setSelectedTemplate(data.templates[0].id);
+        }
+        
+        console.log(`✅ Loaded ${data.templates.length} templates`);
+      } else {
+        setTemplatesError(data.error || 'Failed to load templates');
+        console.warn('⚠️ Templates loading failed:', data.error);
       }
     } catch (error) {
-      console.error('Failed to load templates and voices:', error);
+      const errorMsg = 'Failed to connect to video service';
+      setTemplatesError(errorMsg);
+      console.error('❌ Templates loading error:', error);
+    } finally {
+      setLoadingTemplates(false);
+    }
+  };
+
+  const loadVoices = async () => {
+    try {
+      setLoadingVoices(true);
+      setVoicesError('');
+      
+      const response = await fetch('http://localhost:8000/video/voices');
+      const data = await response.json();
+      
+      if (data.success && data.voices) {
+        setVoices(data.voices);
+        
+        // Auto-select first voice if none selected
+        if (data.voices.length > 0 && !selectedVoice) {
+          setSelectedVoice(data.voices[0].id);
+        }
+        
+        console.log(`✅ Loaded ${data.voices.length} voices`);
+      } else {
+        setVoicesError(data.error || 'Failed to load voices');
+        console.warn('⚠️ Voices loading failed:', data.error);
+      }
+    } catch (error) {
+      const errorMsg = 'Failed to connect to video service';
+      setVoicesError(errorMsg);
+      console.error('❌ Voices loading error:', error);
+    } finally {
+      setLoadingVoices(false);
     }
   };
 
@@ -86,18 +140,24 @@ const VideoCreatorCard: React.FC = () => {
 
     const result = await generateVideo({
       text: text.trim(),
-      template_id: selectedTemplate,
-      voice_id: selectedVoice
+      template_id: selectedTemplate || undefined,
+      voice_id: selectedVoice || undefined
     });
 
     if (result?.success) {
-      console.log('Video generated successfully:', result);
+      console.log('✅ Video generated successfully:', result);
+    } else {
+      console.error('❌ Video generation failed:', result?.error);
     }
   };
 
   const handleReset = () => {
     reset();
     setText('');
+  };
+
+  const handleRefreshTemplatesAndVoices = () => {
+    loadTemplatesAndVoices();
   };
 
   const getStatusIcon = (status: string) => {
@@ -149,16 +209,28 @@ const VideoCreatorCard: React.FC = () => {
           </div>
         </div>
         
-        <motion.button
-          onClick={() => setShowAdvanced(!showAdvanced)}
-          className={`p-2 rounded-lg transition-colors ${
-            showAdvanced ? 'bg-purple-100 text-purple-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          }`}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <Settings className="w-4 h-4" />
-        </motion.button>
+        <div className="flex items-center gap-2">
+          <motion.button
+            onClick={handleRefreshTemplatesAndVoices}
+            className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            title="Refresh templates and voices"
+          >
+            <RefreshCw className="w-4 h-4 text-gray-600" />
+          </motion.button>
+          
+          <motion.button
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className={`p-2 rounded-lg transition-colors ${
+              showAdvanced ? 'bg-purple-100 text-purple-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Settings className="w-4 h-4" />
+          </motion.button>
+        </div>
       </div>
 
       {/* Text Input */}
@@ -205,19 +277,36 @@ const VideoCreatorCard: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-600 mb-2 flex items-center gap-2">
                   <Palette className="w-4 h-4" />
                   Video Template
+                  {loadingTemplates && <Loader2 className="w-3 h-3 animate-spin" />}
                 </label>
-                <select
-                  value={selectedTemplate}
-                  onChange={(e) => setSelectedTemplate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                >
-                  <option value="default">Default Template</option>
-                  {templates.map((template) => (
-                    <option key={template.id} value={template.id}>
-                      {template.name}
-                    </option>
-                  ))}
-                </select>
+                
+                {templatesError ? (
+                  <div className="p-2 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4" />
+                    {templatesError}
+                  </div>
+                ) : (
+                  <select
+                    value={selectedTemplate}
+                    onChange={(e) => setSelectedTemplate(e.target.value)}
+                    disabled={loadingTemplates || templates.length === 0}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-100"
+                  >
+                    <option value="">Select template...</option>
+                    {templates.map((template) => (
+                      <option key={template.id} value={template.id}>
+                        {template.name} {template.description && `- ${template.description}`}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                
+                {templates.length === 0 && !loadingTemplates && !templatesError && (
+                  <div className="p-2 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-600 flex items-center gap-2">
+                    <Info className="w-4 h-4" />
+                    No templates available
+                  </div>
+                )}
               </div>
 
               {/* Voice Selection */}
@@ -225,19 +314,36 @@ const VideoCreatorCard: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-600 mb-2 flex items-center gap-2">
                   <Mic className="w-4 h-4" />
                   Voice
+                  {loadingVoices && <Loader2 className="w-3 h-3 animate-spin" />}
                 </label>
-                <select
-                  value={selectedVoice}
-                  onChange={(e) => setSelectedVoice(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                >
-                  <option value="en-US-1">English (US) - Default</option>
-                  {voices.map((voice) => (
-                    <option key={voice.id} value={voice.id}>
-                      {voice.name} ({voice.language})
-                    </option>
-                  ))}
-                </select>
+                
+                {voicesError ? (
+                  <div className="p-2 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4" />
+                    {voicesError}
+                  </div>
+                ) : (
+                  <select
+                    value={selectedVoice}
+                    onChange={(e) => setSelectedVoice(e.target.value)}
+                    disabled={loadingVoices || voices.length === 0}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-100"
+                  >
+                    <option value="">Select voice...</option>
+                    {voices.map((voice) => (
+                      <option key={voice.id} value={voice.id}>
+                        {voice.name} ({voice.language}) - {voice.gender}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                
+                {voices.length === 0 && !loadingVoices && !voicesError && (
+                  <div className="p-2 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-600 flex items-center gap-2">
+                    <Info className="w-4 h-4" />
+                    No voices available
+                  </div>
+                )}
               </div>
             </div>
           </motion.div>
@@ -331,6 +437,16 @@ const VideoCreatorCard: React.FC = () => {
                       Processing time: {videoResult.processing_time}s
                     </p>
                   )}
+                  {videoResult.demo_mode && (
+                    <p className="text-sm opacity-75 mt-1 text-blue-600">
+                      🎬 Demo Mode: {videoResult.message}
+                    </p>
+                  )}
+                  {videoResult.template_used && (
+                    <p className="text-sm opacity-75 mt-1">
+                      Template: {videoResult.template_used} | Voice: {videoResult.voice_used}
+                    </p>
+                  )}
                 </div>
               </div>
               
@@ -367,6 +483,11 @@ const VideoCreatorCard: React.FC = () => {
                 <div className="flex items-center gap-3 mb-4">
                   <FileVideo className="w-5 h-5 text-purple-600" />
                   <h4 className="font-semibold text-gray-800">Generated Video</h4>
+                  {videoResult.demo_mode && (
+                    <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+                      Demo
+                    </span>
+                  )}
                 </div>
                 
                 <div className="relative bg-black rounded-lg overflow-hidden">

@@ -12,6 +12,8 @@ class ElaiVideoAgent(BaseAgent):
         self.name = "Elai Video Agent"
         self.api_key = os.getenv("ELAI_API_KEY")
         self.base_url = "https://apis.elai.io/api/v1"
+        self._templates_cache = None
+        self._voices_cache = None
 
     def get_input_keys(self) -> list:
         return ["text"]
@@ -22,8 +24,8 @@ class ElaiVideoAgent(BaseAgent):
     def run(self, input_data: AgentInput) -> AgentOutput:
         try:
             text = input_data.get("text", "")
-            template_id = input_data.get("template_id", "default")
-            voice_id = input_data.get("voice_id", "en-US-1")
+            template_id = input_data.get("template_id", None)
+            voice_id = input_data.get("voice_id", None)
             
             if not text:
                 return AgentOutput.from_dict({
@@ -37,8 +39,20 @@ class ElaiVideoAgent(BaseAgent):
                 print("⚠️ ELAI_API_KEY not found - using demo mode")
                 return self._create_demo_video(text)
 
+            # Get valid template and voice IDs
+            valid_template_id = self._get_valid_template_id(template_id)
+            valid_voice_id = self._get_valid_voice_id(voice_id)
+
+            if not valid_template_id:
+                return AgentOutput.from_dict({
+                    "video_url": "",
+                    "status": "error",
+                    "error": "No valid template available. Please check your Elai account templates.",
+                    "agent": self.name
+                })
+
             # Create video generation request
-            video_response = self._create_video(text, template_id, voice_id)
+            video_response = self._create_video(text, valid_template_id, valid_voice_id)
             
             if video_response.get("success"):
                 video_id = video_response.get("video_id")
@@ -51,6 +65,8 @@ class ElaiVideoAgent(BaseAgent):
                     "status": final_result.get("status", "completed"),
                     "video_id": video_id,
                     "processing_time": final_result.get("processing_time", 0),
+                    "template_used": valid_template_id,
+                    "voice_used": valid_voice_id,
                     "agent": self.name
                 })
             else:
@@ -68,6 +84,58 @@ class ElaiVideoAgent(BaseAgent):
                 "error": str(e),
                 "agent": self.name
             })
+
+    def _get_valid_template_id(self, requested_template_id: str = None) -> str:
+        """Get a valid template ID from Elai API"""
+        try:
+            templates = self.get_video_templates()
+            
+            if not templates:
+                print("⚠️ No templates available from Elai API")
+                return None
+            
+            # If a specific template was requested, try to find it
+            if requested_template_id:
+                for template in templates:
+                    if template.get("id") == requested_template_id:
+                        return requested_template_id
+                print(f"⚠️ Requested template '{requested_template_id}' not found, using first available")
+            
+            # Return the first available template
+            first_template = templates[0]
+            template_id = first_template.get("id")
+            print(f"✅ Using template: {template_id} - {first_template.get('name', 'Unknown')}")
+            return template_id
+            
+        except Exception as e:
+            print(f"❌ Error getting valid template ID: {e}")
+            return None
+
+    def _get_valid_voice_id(self, requested_voice_id: str = None) -> str:
+        """Get a valid voice ID from Elai API"""
+        try:
+            voices = self.get_available_voices()
+            
+            if not voices:
+                print("⚠️ No voices available from Elai API, using default")
+                return "en-US-1"  # Fallback default
+            
+            # If a specific voice was requested, try to find it
+            if requested_voice_id:
+                for voice in voices:
+                    if voice.get("id") == requested_voice_id:
+                        return requested_voice_id
+                print(f"⚠️ Requested voice '{requested_voice_id}' not found, using first available")
+            
+            # Return the first available voice
+            first_voice = voices[0]
+            voice_id = first_voice.get("id")
+            print(f"✅ Using voice: {voice_id} - {first_voice.get('name', 'Unknown')}")
+            return voice_id
+            
+        except Exception as e:
+            print(f"❌ Error getting valid voice ID: {e}")
+            return "en-US-1"  # Fallback default
 
     def _create_demo_video(self, text: str) -> AgentOutput:
         """Create a demo video response when API key is not available"""
@@ -88,35 +156,29 @@ class ElaiVideoAgent(BaseAgent):
             "message": "Demo video generated (ELAI_API_KEY not configured)"
         })
 
-    def _create_video(self, text: str, template_id: str = "default", voice_id: str = "en-US-1") -> dict:
-        """Create a video using Elai API"""
+    def _create_video(self, text: str, template_id: str, voice_id: str) -> dict:
+        """Create a video using Elai API with improved error handling"""
         try:
             headers = {
                 "Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json"
             }
             
-            # Enhanced video creation payload with required fields
+            # Simplified payload that should work with most Elai setups
             payload = {
-                "name": f"Video_{int(time.time())}",  # Required field
+                "name": f"Video_{int(time.time())}",
                 "templateId": template_id,
-                "script": text,
-                "voice": {
-                    "provider": "elai",
-                    "voiceId": voice_id,
-                    "name": "Default Voice"  # Add voice name
-                },
-                "settings": {
-                    "resolution": "1080p",
-                    "format": "mp4",
-                    "quality": "high"
-                },
-                "metadata": {
-                    "title": "Generated Video",
-                    "description": f"Video generated from text: {text[:100]}...",
-                    "tags": ["ai-generated", "elai"]
-                }
+                "script": text
             }
+            
+            # Add voice configuration if available
+            if voice_id:
+                payload["voice"] = {
+                    "voiceId": voice_id
+                }
+            
+            print(f"🎬 Creating video with template: {template_id}, voice: {voice_id}")
+            print(f"📝 Script length: {len(text)} characters")
             
             response = requests.post(
                 f"{self.base_url}/videos",
@@ -125,29 +187,44 @@ class ElaiVideoAgent(BaseAgent):
                 timeout=30
             )
             
-            print(f"Elai API Response Status: {response.status_code}")
-            print(f"Elai API Response: {response.text}")
+            print(f"📡 Elai API Response Status: {response.status_code}")
             
-            if response.status_code == 201 or response.status_code == 200:
+            if response.status_code in [200, 201]:
                 data = response.json()
+                video_id = data.get("id") or data.get("videoId") or data.get("video_id")
+                
+                if not video_id:
+                    print("⚠️ No video ID in response:", data)
+                    return {
+                        "success": False,
+                        "error": "No video ID returned from Elai API"
+                    }
+                
+                print(f"✅ Video creation initiated with ID: {video_id}")
                 return {
                     "success": True,
-                    "video_id": data.get("id") or data.get("videoId") or data.get("video_id"),
+                    "video_id": video_id,
                     "status": data.get("status", "processing")
                 }
             else:
-                error_detail = response.text
-                try:
-                    error_json = response.json()
-                    error_detail = error_json.get("message", error_json.get("error", response.text))
-                except:
-                    pass
+                error_detail = self._extract_error_message(response)
+                print(f"❌ Elai API Error: {error_detail}")
                 
                 return {
                     "success": False,
-                    "error": f"API Error: {response.status_code} - {error_detail}"
+                    "error": f"API Error ({response.status_code}): {error_detail}"
                 }
                 
+        except requests.exceptions.Timeout:
+            return {
+                "success": False,
+                "error": "Request timeout - Elai API took too long to respond"
+            }
+        except requests.exceptions.ConnectionError:
+            return {
+                "success": False,
+                "error": "Connection error - Unable to reach Elai API"
+            }
         except requests.exceptions.RequestException as e:
             return {
                 "success": False,
@@ -159,8 +236,28 @@ class ElaiVideoAgent(BaseAgent):
                 "error": f"Unexpected error: {str(e)}"
             }
 
+    def _extract_error_message(self, response) -> str:
+        """Extract meaningful error message from API response"""
+        try:
+            error_data = response.json()
+            
+            # Try different common error message fields
+            error_msg = (
+                error_data.get("message") or 
+                error_data.get("error") or 
+                error_data.get("detail") or
+                error_data.get("errors", {}).get("message") if isinstance(error_data.get("errors"), dict) else
+                str(error_data.get("errors")) if error_data.get("errors") else
+                response.text
+            )
+            
+            return error_msg
+            
+        except:
+            return response.text or f"HTTP {response.status_code}"
+
     def _poll_video_status(self, video_id: str, max_wait_time: int = 300) -> dict:
-        """Poll video status until completion or timeout"""
+        """Poll video status until completion or timeout with improved error handling"""
         start_time = time.time()
         
         headers = {
@@ -168,41 +265,86 @@ class ElaiVideoAgent(BaseAgent):
             "Content-Type": "application/json"
         }
         
+        poll_interval = 10  # Start with 10 seconds
+        max_poll_interval = 30  # Max 30 seconds between polls
+        
         while time.time() - start_time < max_wait_time:
             try:
+                print(f"🔄 Checking video status for ID: {video_id}")
+                
                 response = requests.get(
                     f"{self.base_url}/videos/{video_id}",
                     headers=headers,
-                    timeout=10
+                    timeout=15
                 )
                 
                 if response.status_code == 200:
                     data = response.json()
-                    status = data.get("status", "processing")
+                    status = data.get("status", "processing").lower()
                     
-                    if status == "completed":
-                        return {
-                            "status": "completed",
-                            "video_url": data.get("videoUrl") or data.get("url") or data.get("downloadUrl"),
-                            "processing_time": int(time.time() - start_time)
-                        }
-                    elif status == "failed" or status == "error":
+                    print(f"📊 Video status: {status}")
+                    
+                    if status in ["completed", "done", "finished"]:
+                        video_url = (
+                            data.get("videoUrl") or 
+                            data.get("url") or 
+                            data.get("downloadUrl") or
+                            data.get("video_url")
+                        )
+                        
+                        if video_url:
+                            print(f"✅ Video completed: {video_url}")
+                            return {
+                                "status": "completed",
+                                "video_url": video_url,
+                                "processing_time": int(time.time() - start_time)
+                            }
+                        else:
+                            print("⚠️ Video marked as completed but no URL provided")
+                            return {
+                                "status": "error",
+                                "error": "Video completed but no download URL available",
+                                "processing_time": int(time.time() - start_time)
+                            }
+                    
+                    elif status in ["failed", "error", "cancelled"]:
+                        error_msg = data.get("error") or data.get("message") or "Video generation failed"
+                        print(f"❌ Video generation failed: {error_msg}")
                         return {
                             "status": "error",
-                            "error": data.get("error", "Video generation failed"),
+                            "error": error_msg,
                             "processing_time": int(time.time() - start_time)
                         }
                     
                     # Still processing, wait before next poll
-                    time.sleep(10)
-                else:
+                    print(f"⏳ Still processing... waiting {poll_interval} seconds")
+                    time.sleep(poll_interval)
+                    
+                    # Gradually increase poll interval to reduce API calls
+                    poll_interval = min(poll_interval + 5, max_poll_interval)
+                    
+                elif response.status_code == 404:
                     return {
                         "status": "error",
-                        "error": f"Status check failed: {response.status_code}",
+                        "error": f"Video not found (ID: {video_id})",
+                        "processing_time": int(time.time() - start_time)
+                    }
+                else:
+                    error_detail = self._extract_error_message(response)
+                    print(f"❌ Status check failed: {error_detail}")
+                    return {
+                        "status": "error",
+                        "error": f"Status check failed: {error_detail}",
                         "processing_time": int(time.time() - start_time)
                     }
                     
+            except requests.exceptions.Timeout:
+                print("⏰ Status check timeout, retrying...")
+                time.sleep(poll_interval)
+                continue
+                
             except Exception as e:
+                print(f"❌ Error during status polling: {e}")
                 return {
                     "status": "error",
                     "error": f"Status polling failed: {str(e)}",
@@ -210,26 +352,33 @@ class ElaiVideoAgent(BaseAgent):
                 }
         
         # Timeout reached
+        print(f"⏰ Video generation timed out after {max_wait_time} seconds")
         return {
             "status": "timeout",
-            "error": "Video generation timed out",
+            "error": f"Video generation timed out after {max_wait_time} seconds",
             "processing_time": max_wait_time
         }
 
     def get_video_templates(self) -> list:
-        """Get available video templates from Elai API"""
+        """Get available video templates from Elai API with caching"""
+        if self._templates_cache is not None:
+            return self._templates_cache
+            
         if not self.api_key:
-            return [
+            self._templates_cache = [
                 {"id": "default", "name": "Default Template", "description": "Standard video template"},
                 {"id": "professional", "name": "Professional", "description": "Business presentation style"},
                 {"id": "casual", "name": "Casual", "description": "Informal and friendly style"}
             ]
+            return self._templates_cache
             
         try:
             headers = {
                 "Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json"
             }
+            
+            print("📋 Fetching available templates from Elai API...")
             
             response = requests.get(
                 f"{self.base_url}/templates",
@@ -238,28 +387,51 @@ class ElaiVideoAgent(BaseAgent):
             )
             
             if response.status_code == 200:
-                return response.json().get("templates", [])
-            else:
-                return []
+                data = response.json()
+                templates = data.get("templates", data if isinstance(data, list) else [])
                 
-        except Exception:
-            return []
+                if templates:
+                    print(f"✅ Found {len(templates)} templates")
+                    for template in templates[:3]:  # Log first 3 templates
+                        print(f"   - {template.get('id')}: {template.get('name', 'Unknown')}")
+                    
+                    self._templates_cache = templates
+                    return templates
+                else:
+                    print("⚠️ No templates found in API response")
+                    
+            else:
+                error_detail = self._extract_error_message(response)
+                print(f"❌ Failed to fetch templates: {error_detail}")
+                
+        except Exception as e:
+            print(f"❌ Error fetching templates: {e}")
+        
+        # Return fallback templates
+        self._templates_cache = []
+        return []
 
     def get_available_voices(self) -> list:
-        """Get available voices from Elai API"""
+        """Get available voices from Elai API with caching"""
+        if self._voices_cache is not None:
+            return self._voices_cache
+            
         if not self.api_key:
-            return [
+            self._voices_cache = [
                 {"id": "en-US-1", "name": "Sarah", "language": "English (US)", "gender": "Female"},
                 {"id": "en-US-2", "name": "John", "language": "English (US)", "gender": "Male"},
                 {"id": "en-GB-1", "name": "Emma", "language": "English (UK)", "gender": "Female"},
                 {"id": "es-ES-1", "name": "Maria", "language": "Spanish", "gender": "Female"}
             ]
+            return self._voices_cache
             
         try:
             headers = {
                 "Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json"
             }
+            
+            print("🎤 Fetching available voices from Elai API...")
             
             response = requests.get(
                 f"{self.base_url}/voices",
@@ -268,9 +440,32 @@ class ElaiVideoAgent(BaseAgent):
             )
             
             if response.status_code == 200:
-                return response.json().get("voices", [])
-            else:
-                return []
+                data = response.json()
+                voices = data.get("voices", data if isinstance(data, list) else [])
                 
-        except Exception:
-            return []
+                if voices:
+                    print(f"✅ Found {len(voices)} voices")
+                    for voice in voices[:3]:  # Log first 3 voices
+                        print(f"   - {voice.get('id')}: {voice.get('name', 'Unknown')} ({voice.get('language', 'Unknown')})")
+                    
+                    self._voices_cache = voices
+                    return voices
+                else:
+                    print("⚠️ No voices found in API response")
+                    
+            else:
+                error_detail = self._extract_error_message(response)
+                print(f"❌ Failed to fetch voices: {error_detail}")
+                
+        except Exception as e:
+            print(f"❌ Error fetching voices: {e}")
+        
+        # Return fallback voices
+        self._voices_cache = []
+        return []
+
+    def clear_cache(self):
+        """Clear cached templates and voices"""
+        self._templates_cache = None
+        self._voices_cache = None
+        print("🗑️ Cleared templates and voices cache")
