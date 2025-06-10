@@ -22,33 +22,34 @@ class ResearchDataAgent(BaseAgent):
 
     def run(self, input_data: AgentInput) -> AgentOutput:
         try:
-            # Extract query from input
             content_roadmap = input_data.get("content_roadmap", "")
             campaign_theme = input_data.get("campaign_theme", "")
             text_input = input_data.get("text", "")
-            
-            # Determine the research query
-            if campaign_theme:
-                query = campaign_theme
-            elif text_input:
-                query = text_input
-            else:
-                # Extract key terms from content roadmap
-                query = self._extract_query_from_roadmap(content_roadmap)
+            query = campaign_theme or text_input or self._extract_query_from_roadmap(content_roadmap)
 
             if not query:
                 return AgentOutput.from_dict({
-                    "research_summary": "No research query could be determined from input",
+                    "research_summary": "No research query could be determined from input.",
                     "trending_topics": [],
                     "statistics": {},
                     "status": "error",
-                    "agent": "Research & Data Agent"
+                    "agent": self.name
                 })
 
-            # Perform real research using ResearchService
             research_results = asyncio.run(self._perform_research(query))
-            
-            # Process and summarize the results
+            results = research_results.get("results", [])
+
+            # Fallback to OpenAI web search if no results found
+            if not results:
+                fallback_summary = self._fallback_openai_search(query)
+                return AgentOutput.from_dict({
+                    "research_summary": fallback_summary,
+                    "trending_topics": [],
+                    "statistics": {"fallback_used": True},
+                    "status": "fallback",
+                    "agent": self.name
+                })
+
             research_summary = self._create_research_summary(research_results, query)
             trending_topics = self._extract_trending_topics(research_results)
             statistics = self._compile_statistics(research_results)
@@ -57,9 +58,9 @@ class ResearchDataAgent(BaseAgent):
                 "research_summary": research_summary,
                 "trending_topics": trending_topics,
                 "statistics": statistics,
-                "research_data": research_results,  # Include raw data for other agents
+                "research_data": research_results,
                 "status": "completed",
-                "agent": "Research & Data Agent"
+                "agent": self.name
             })
 
         except Exception as e:
@@ -68,47 +69,35 @@ class ResearchDataAgent(BaseAgent):
                 "trending_topics": [],
                 "statistics": {},
                 "status": "error",
-                "agent": "Research & Data Agent",
+                "agent": self.name,
                 "error": str(e)
             })
 
     def _extract_query_from_roadmap(self, roadmap: str) -> str:
-        """Extract key research terms from content roadmap"""
         if not roadmap:
             return ""
-        
-        # Use OpenAI to extract key research terms
         try:
             prompt = f"""
-Extract the main research topic or key terms from this content roadmap that would be good for research:
+Extract the main research topic from this roadmap:
 
 {roadmap}
 
-Return only the main topic or key terms (2-5 words maximum) that would be good for searching academic papers, news, and statistics.
+Return only 2–5 words for searching papers, news, and data.
 """
-            
             response = client.chat.completions.create(
                 model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You extract key research terms from content plans."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.3,
-                max_tokens=50
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.2,
+                max_tokens=30
             )
-            
             return response.choices[0].message.content.strip()
-            
-        except Exception as e:
-            # Fallback: extract first few meaningful words
-            words = roadmap.split()[:5]
-            return " ".join(word for word in words if len(word) > 3)
+        except Exception:
+            return " ".join(w for w in roadmap.split()[:5] if len(w) > 3)
 
     async def _perform_research(self, query: str) -> dict:
-        """Perform research using the ResearchService"""
         try:
             async with ResearchService() as service:
-                results = await service.search(
+                return await service.search(
                     query=query,
                     filters={
                         'sources': ['academic', 'web', 'statistics'],
@@ -116,132 +105,109 @@ Return only the main topic or key terms (2-5 words maximum) that would be good f
                     },
                     user_id='research_agent'
                 )
-                return results
         except Exception as e:
-            print(f"Research service error: {e}")
-            # Return empty results structure
-            return {
-                'query': query,
-                'total_results': 0,
-                'results': [],
-                'sources_searched': [],
-                'error': str(e)
-            }
+            print(f"ResearchService error: {e}")
+            return {"query": query, "results": [], "error": str(e)}
 
     def _create_research_summary(self, research_results: dict, query: str) -> str:
-        """Create a comprehensive research summary"""
         results = research_results.get('results', [])
-        
         if not results:
-            return f"No research results found for '{query}'. This may indicate limited available data or connectivity issues with research sources."
+            return f"No research results found for '{query}'."
 
-        # Compile content from top results
         content_pieces = []
-        for result in results[:5]:  # Top 5 results
+        for result in results[:10]:  # 🔥 now using top 10
             title = result.get('title', '')
             content = result.get('content', '')
             source = result.get('source', '')
-            
             content_pieces.append(f"**{source}**: {title}\n{content[:200]}...")
 
-        combined_content = "\n\n".join(content_pieces)
+        combined = "\n\n".join(content_pieces)
 
-        # Use AI to create summary
         try:
             prompt = f"""
-Based on the following research results for "{query}", create a comprehensive research summary with key findings:
+Based on the top 10 research results about "{query}", summarize key findings:
 
-{combined_content}
+{combined}
 
-Provide:
-1. Key findings (3-5 bullet points)
-2. Important trends or patterns
-3. Relevant statistics or data points
-4. Implications for content strategy
+Include:
+- 3–5 bullet point takeaways
+- Any observable trends or patterns
+- Key statistics or metrics
+- Strategic content recommendations
 
-Format as a clear, professional research summary.
+Format as a professional research summary.
 """
-
             response = client.chat.completions.create(
                 model="gpt-4",
-                messages=[
-                    {"role": "system", "content": "You are a research analyst creating comprehensive summaries."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.7,
-                max_tokens=800
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.6,
+                max_tokens=900
             )
-
             return response.choices[0].message.content.strip()
-
         except Exception as e:
-            # Fallback summary
             return f"""
 Research Summary for "{query}":
 
-Found {len(results)} relevant sources including {', '.join(set(r.get('source', '') for r in results))}.
+Found {len(results)} sources: {', '.join(set(r.get('source') for r in results))}
 
-Key Sources:
-{chr(10).join([f"• {r.get('title', 'Untitled')} ({r.get('source', 'Unknown')})" for r in results[:3]])}
-
-This research provides valuable insights for content development and strategic planning.
+Top Findings:
+{chr(10).join([f"• {r.get('title')} ({r.get('source')})" for r in results[:3]])}
 """
 
     def _extract_trending_topics(self, research_results: dict) -> list:
-        """Extract trending topics from research results"""
-        results = research_results.get('results', [])
-        
+        results = research_results.get("results", [])
         if not results:
             return []
 
-        # Extract keywords and topics from titles and content
         topics = set()
-        
-        for result in results:
-            title = result.get('title', '').lower()
-            content = result.get('content', '').lower()
-            
-            # Simple keyword extraction (could be enhanced with NLP)
-            words = (title + " " + content).split()
-            
-            # Filter for meaningful terms
-            meaningful_words = [
-                word.strip('.,!?()[]{}":;') 
-                for word in words 
-                if len(word) > 4 and word.isalpha()
-            ]
-            
-            # Add most frequent terms
-            for word in meaningful_words[:10]:  # Top 10 words per result
-                if word not in ['research', 'study', 'analysis', 'report', 'data']:
+        for r in results:
+            words = (r.get('title', '') + " " + r.get('content', '')).lower().split()
+            for word in words[:20]:
+                if len(word) > 4 and word.isalpha() and word not in ['research', 'study', 'report']:
                     topics.add(word.title())
-
-        # Return top trending topics
-        return list(topics)[:8]
+        return list(topics)[:10]
 
     def _compile_statistics(self, research_results: dict) -> dict:
-        """Compile statistics from research results"""
         results = research_results.get('results', [])
-        
         stats = {
-            'total_sources': len(set(r.get('source', '') for r in results)),
+            'total_sources': len(set(r.get('source') for r in results)),
             'academic_papers': len([r for r in results if r.get('data_type') == 'academic']),
             'news_articles': len([r for r in results if r.get('data_type') == 'news']),
             'statistical_reports': len([r for r in results if r.get('data_type') == 'statistics']),
             'average_relevance': 0,
-            'sources_breakdown': {}
+            'sources_breakdown': {},
+            'timestamp': datetime.now().isoformat()
         }
 
         if results:
-            # Calculate average relevance
-            relevance_scores = [r.get('relevance_score', 0) for r in results]
-            stats['average_relevance'] = round(sum(relevance_scores) / len(relevance_scores), 2)
-            
-            # Source breakdown
-            source_counts = {}
-            for result in results:
-                source = result.get('source', 'Unknown')
-                source_counts[source] = source_counts.get(source, 0) + 1
-            stats['sources_breakdown'] = source_counts
+            scores = [r.get('relevance_score', 0) for r in results]
+            stats['average_relevance'] = round(sum(scores) / len(scores), 2)
+            for r in results:
+                src = r.get('source', 'Unknown')
+                stats['sources_breakdown'][src] = stats['sources_breakdown'].get(src, 0) + 1
 
         return stats
+
+    def _fallback_openai_search(self, query: str) -> str:
+        """Fallback summary using OpenAI when no sources return results"""
+        try:
+            fallback_prompt = f"""
+Use your browsing or knowledge to create a high-level overview of this topic: "{query}"
+
+Explain:
+- What it is
+- Why it's relevant today
+- Recent developments
+- Data or statistics if known
+
+Output as a professional research brief.
+"""
+            response = client.chat.completions.create(
+                model="gpt-4",
+                messages=[{"role": "user", "content": fallback_prompt}],
+                temperature=0.7,
+                max_tokens=700
+            )
+            return response.choices[0].message.content.strip()
+        except Exception as e:
+            return f"Unable to generate fallback summary for '{query}'. Error: {str(e)}"
