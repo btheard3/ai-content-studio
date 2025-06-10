@@ -96,17 +96,25 @@ class ElaiVideoAgent(BaseAgent):
                 "Content-Type": "application/json"
             }
             
-            # Basic video creation payload
+            # Enhanced video creation payload with required fields
             payload = {
+                "name": f"Video_{int(time.time())}",  # Required field
                 "templateId": template_id,
                 "script": text,
                 "voice": {
                     "provider": "elai",
-                    "voiceId": voice_id
+                    "voiceId": voice_id,
+                    "name": "Default Voice"  # Add voice name
                 },
                 "settings": {
                     "resolution": "1080p",
-                    "format": "mp4"
+                    "format": "mp4",
+                    "quality": "high"
+                },
+                "metadata": {
+                    "title": "Generated Video",
+                    "description": f"Video generated from text: {text[:100]}...",
+                    "tags": ["ai-generated", "elai"]
                 }
             }
             
@@ -117,17 +125,27 @@ class ElaiVideoAgent(BaseAgent):
                 timeout=30
             )
             
+            print(f"Elai API Response Status: {response.status_code}")
+            print(f"Elai API Response: {response.text}")
+            
             if response.status_code == 201 or response.status_code == 200:
                 data = response.json()
                 return {
                     "success": True,
-                    "video_id": data.get("id") or data.get("videoId"),
+                    "video_id": data.get("id") or data.get("videoId") or data.get("video_id"),
                     "status": data.get("status", "processing")
                 }
             else:
+                error_detail = response.text
+                try:
+                    error_json = response.json()
+                    error_detail = error_json.get("message", error_json.get("error", response.text))
+                except:
+                    pass
+                
                 return {
                     "success": False,
-                    "error": f"API Error: {response.status_code} - {response.text}"
+                    "error": f"API Error: {response.status_code} - {error_detail}"
                 }
                 
         except requests.exceptions.RequestException as e:
@@ -165,7 +183,7 @@ class ElaiVideoAgent(BaseAgent):
                     if status == "completed":
                         return {
                             "status": "completed",
-                            "video_url": data.get("videoUrl") or data.get("url"),
+                            "video_url": data.get("videoUrl") or data.get("url") or data.get("downloadUrl"),
                             "processing_time": int(time.time() - start_time)
                         }
                     elif status == "failed" or status == "error":
