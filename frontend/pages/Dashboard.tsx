@@ -16,32 +16,61 @@ import CreativeWriterCard from "../components/CreativeWriterCard";
 import QualityControlCard from "../components/QualityControlCard";
 import PublishingCard from "../components/PublishingCard";
 import { useAgents } from "../context/AgentContext";
+import { QualityControlOutput, PublishingOutput } from "../types";
+
+// Type guard functions
+function isQualityControlOutput(obj: any): obj is QualityControlOutput {
+	return obj && 
+		typeof obj === 'object' && 
+		typeof obj.quality_score === 'number' &&
+		typeof obj.final_content === 'string' &&
+		Array.isArray(obj.improvements_made);
+}
+
+function isPublishingOutput(obj: any): obj is PublishingOutput {
+	return obj && 
+		typeof obj === 'object' && 
+		typeof obj.published_status === 'string' &&
+		Array.isArray(obj.distribution_channels) &&
+		obj.publication_metadata &&
+		typeof obj.publication_metadata === 'object';
+}
 
 const Dashboard: React.FC = () => {
 	const { agents, activeWorkflows, completedItems } = useAgents();
 
-	// Extract outputs and parse JSON if necessary
-	let qualityControlOutput = agents.find(
-		(a) => a.id === "quality_control"
-	)?.output;
-	let publishingOutput = agents.find(
-		(a) => a.id === "publishing_agent"
-	)?.output;
+	// Extract outputs and parse JSON if necessary with proper typing
+	let qualityControlOutput: QualityControlOutput | null = null;
+	let publishingOutput: PublishingOutput | null = null;
+
+	const qualityAgent = agents.find((a) => a.id === "quality_control");
+	const publishingAgent = agents.find((a) => a.id === "publishing_agent");
 
 	try {
-		qualityControlOutput =
-			typeof qualityControlOutput === "string"
-				? JSON.parse(qualityControlOutput)
-				: qualityControlOutput;
+		// Handle quality control output
+		if (qualityAgent?.output) {
+			const parsed = typeof qualityAgent.output === "string" 
+				? JSON.parse(qualityAgent.output) 
+				: qualityAgent.output;
+			
+			if (isQualityControlOutput(parsed)) {
+				qualityControlOutput = parsed;
+			}
+		}
 
-		publishingOutput =
-			typeof publishingOutput === "string"
-				? JSON.parse(publishingOutput)
-				: publishingOutput;
+		// Handle publishing output
+		if (publishingAgent?.output) {
+			const parsed = typeof publishingAgent.output === "string" 
+				? JSON.parse(publishingAgent.output) 
+				: publishingAgent.output;
+			
+			if (isPublishingOutput(parsed)) {
+				publishingOutput = parsed;
+			}
+		}
 	} catch (e) {
 		console.error("Failed to parse agent output:", e);
-		qualityControlOutput = null;
-		publishingOutput = null;
+		// Keep outputs as null on parse error
 	}
 
 	const kpiCards = [
@@ -187,7 +216,7 @@ const Dashboard: React.FC = () => {
 				<ResearchDataCard />
 			</motion.div>
 
-			{/* Quality Control Card */}
+			{/* Quality Control Card - Only render if we have valid output */}
 			{qualityControlOutput && (
 				<motion.div className="mb-8" variants={itemVariants}>
 					<div className="flex items-center gap-3 mb-4">
@@ -206,7 +235,7 @@ const Dashboard: React.FC = () => {
 				</motion.div>
 			)}
 
-			{/* Publishing Summary Card */}
+			{/* Publishing Summary Card - Only render if we have valid output */}
 			{publishingOutput && (
 				<motion.div className="mb-8" variants={itemVariants}>
 					<div className="flex items-center gap-3 mb-4">

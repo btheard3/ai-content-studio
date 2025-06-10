@@ -50,3 +50,20 @@ export type PerformanceMetric = {
 	target: number;
 	change: number;
 };
+
+// Add interfaces for agent outputs
+export interface QualityControlOutput {
+	quality_score: number;
+	final_content: string;
+	improvements_made: string[];
+}
+
+export interface PublishingOutput {
+	published_status: string;
+	distribution_channels: string[];
+	publication_metadata: {
+		timestamp: string;
+		word_count: number;
+		campaign: string;
+	};
+}
