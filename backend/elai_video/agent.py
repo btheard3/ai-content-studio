@@ -22,6 +22,8 @@ class ElaiVideoAgent(BaseAgent):
     def run(self, input_data: AgentInput) -> AgentOutput:
         try:
             text = input_data.get("text", "")
+            template_id = input_data.get("template_id", "default")
+            voice_id = input_data.get("voice_id", "en-US-1")
             
             if not text:
                 return AgentOutput.from_dict({
@@ -32,15 +34,11 @@ class ElaiVideoAgent(BaseAgent):
                 })
 
             if not self.api_key:
-                return AgentOutput.from_dict({
-                    "video_url": "",
-                    "status": "error",
-                    "error": "ELAI_API_KEY not found in environment variables",
-                    "agent": self.name
-                })
+                print("⚠️ ELAI_API_KEY not found - using demo mode")
+                return self._create_demo_video(text)
 
             # Create video generation request
-            video_response = self._create_video(text)
+            video_response = self._create_video(text, template_id, voice_id)
             
             if video_response.get("success"):
                 video_id = video_response.get("video_id")
@@ -71,7 +69,26 @@ class ElaiVideoAgent(BaseAgent):
                 "agent": self.name
             })
 
-    def _create_video(self, text: str) -> dict:
+    def _create_demo_video(self, text: str) -> AgentOutput:
+        """Create a demo video response when API key is not available"""
+        import time
+        
+        # Simulate processing time
+        time.sleep(2)
+        
+        demo_video_url = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+        
+        return AgentOutput.from_dict({
+            "video_url": demo_video_url,
+            "status": "completed",
+            "video_id": f"demo_{int(time.time())}",
+            "processing_time": 2,
+            "agent": self.name,
+            "demo_mode": True,
+            "message": "Demo video generated (ELAI_API_KEY not configured)"
+        })
+
+    def _create_video(self, text: str, template_id: str = "default", voice_id: str = "en-US-1") -> dict:
         """Create a video using Elai API"""
         try:
             headers = {
@@ -81,11 +98,11 @@ class ElaiVideoAgent(BaseAgent):
             
             # Basic video creation payload
             payload = {
-                "templateId": "default",  # You may need to adjust this based on available templates
+                "templateId": template_id,
                 "script": text,
                 "voice": {
                     "provider": "elai",
-                    "voiceId": "en-US-1"  # Default English voice
+                    "voiceId": voice_id
                 },
                 "settings": {
                     "resolution": "1080p",
@@ -183,6 +200,13 @@ class ElaiVideoAgent(BaseAgent):
 
     def get_video_templates(self) -> list:
         """Get available video templates from Elai API"""
+        if not self.api_key:
+            return [
+                {"id": "default", "name": "Default Template", "description": "Standard video template"},
+                {"id": "professional", "name": "Professional", "description": "Business presentation style"},
+                {"id": "casual", "name": "Casual", "description": "Informal and friendly style"}
+            ]
+            
         try:
             headers = {
                 "Authorization": f"Bearer {self.api_key}",
@@ -205,6 +229,14 @@ class ElaiVideoAgent(BaseAgent):
 
     def get_available_voices(self) -> list:
         """Get available voices from Elai API"""
+        if not self.api_key:
+            return [
+                {"id": "en-US-1", "name": "Sarah", "language": "English (US)", "gender": "Female"},
+                {"id": "en-US-2", "name": "John", "language": "English (US)", "gender": "Male"},
+                {"id": "en-GB-1", "name": "Emma", "language": "English (UK)", "gender": "Female"},
+                {"id": "es-ES-1", "name": "Maria", "language": "Spanish", "gender": "Female"}
+            ]
+            
         try:
             headers = {
                 "Authorization": f"Bearer {self.api_key}",

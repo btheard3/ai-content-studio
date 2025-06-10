@@ -10,6 +10,7 @@ beautifulsoup4==4.12.2
 arxiv==1.4.8
 wikipedia==1.4.0
 lxml==4.9.3
+requests==2.31.0
 
 # Optional - GCP clients if needed later
 # google-cloud-aiplatform==1.38.0

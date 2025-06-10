@@ -85,9 +85,23 @@ def generate_video(request: VideoRequest):
     try:
         print(f"🎬 Starting video generation with text: {request.text[:100]}...")
         
+        # Import the agent directly to avoid module path issues
+        import sys
+        import os
+        sys.path.append(os.path.join(os.path.dirname(__file__)))
+        
+        from elai_video.agent import ElaiVideoAgent
         from backend.agent_base import AgentInput
-        input_data = AgentInput.from_text(request.text)
-        result = executor.run_agent("elai_video_agent", input_data)
+        
+        # Create agent instance and run
+        agent = ElaiVideoAgent()
+        input_data = AgentInput({
+            "text": request.text,
+            "template_id": request.template_id,
+            "voice_id": request.voice_id
+        })
+        
+        result = agent.run(input_data)
         
         if result.data.get("status") == "completed":
             print("✅ Video generation completed successfully")
@@ -122,7 +136,11 @@ def generate_video(request: VideoRequest):
 def get_video_templates():
     """Get available video templates"""
     try:
-        from backend.elai_video.agent import ElaiVideoAgent
+        import sys
+        import os
+        sys.path.append(os.path.join(os.path.dirname(__file__)))
+        
+        from elai_video.agent import ElaiVideoAgent
         agent = ElaiVideoAgent()
         templates = agent.get_video_templates()
         return {
@@ -134,14 +152,22 @@ def get_video_templates():
         return {
             "success": False,
             "error": str(e),
-            "templates": []
+            "templates": [
+                {"id": "default", "name": "Default Template", "description": "Standard video template"},
+                {"id": "professional", "name": "Professional", "description": "Business presentation style"},
+                {"id": "casual", "name": "Casual", "description": "Informal and friendly style"}
+            ]
         }
 
 @app.get("/video/voices")
 def get_video_voices():
     """Get available video voices"""
     try:
-        from backend.elai_video.agent import ElaiVideoAgent
+        import sys
+        import os
+        sys.path.append(os.path.join(os.path.dirname(__file__)))
+        
+        from elai_video.agent import ElaiVideoAgent
         agent = ElaiVideoAgent()
         voices = agent.get_available_voices()
         return {
@@ -153,7 +179,12 @@ def get_video_voices():
         return {
             "success": False,
             "error": str(e),
-            "voices": []
+            "voices": [
+                {"id": "en-US-1", "name": "Sarah", "language": "English (US)", "gender": "Female"},
+                {"id": "en-US-2", "name": "John", "language": "English (US)", "gender": "Male"},
+                {"id": "en-GB-1", "name": "Emma", "language": "English (UK)", "gender": "Female"},
+                {"id": "es-ES-1", "name": "Maria", "language": "Spanish", "gender": "Female"}
+            ]
         }
 
 @app.post("/run/{agent_id}")

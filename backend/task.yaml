@@ -28,7 +28,7 @@ agents:
     output_keys: ["published_status", "distribution_channels", "publication_metadata"]
 
   elai_video_agent:
-    spec_path: "elai_video/agent.py"
+    spec_path: "backend/elai_video/agent.py"
     input_keys: ["text"]
     output_keys: ["video_url", "status", "video_id", "processing_time"]
 
