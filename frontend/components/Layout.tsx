@@ -11,7 +11,8 @@ import {
   Sparkles,
   Bell,
   Search as SearchIcon,
-  Database
+  Database,
+  Video
 } from "lucide-react";
 
 type LayoutProps = {
@@ -39,6 +40,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       icon: <Database className="w-5 h-5" />,
       label: "Research",
       description: "Data & insights"
+    },
+    {
+      to: "/video",
+      icon: <Video className="w-5 h-5" />,
+      label: "Video Creator",
+      description: "Text-to-video AI"
     },
     {
       to: "/analytics",
@@ -101,7 +108,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       {/* Sidebar */}
       <motion.aside
-        className={`sidebar ${sidebarOpen ? 'open' : ''} md:relative md:translate-x-0`}
+        className="sidebar md:relative md:translate-x-0"
         variants={sidebarVariants}
         initial="closed"
         animate={sidebarOpen ? "open" : "closed"}

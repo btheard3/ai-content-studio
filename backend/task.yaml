@@ -27,6 +27,11 @@ agents:
     input_keys: ["final_content", "campaign_theme"]
     output_keys: ["published_status", "distribution_channels", "publication_metadata"]
 
+  elai_video_agent:
+    spec_path: "elai_video/agent.py"
+    input_keys: ["text"]
+    output_keys: ["video_url", "status", "video_id", "processing_time"]
+
 workflow:
   stages:
     - agent: content_strategist
@@ -48,3 +53,9 @@ workflow:
     - agent: publishing_agent
       name: "Publishing & Distribution"
       description: "Format and distribute final content"
+
+video_workflow:
+  stages:
+    - agent: elai_video_agent
+      name: "Video Generation"
+      description: "Generate video from text using Elai AI"

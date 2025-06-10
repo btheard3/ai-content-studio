@@ -9,9 +9,11 @@ import {
 	Target,
 	BookOpen,
 	UploadCloud,
+	Video
 } from "lucide-react";
 import ContentGenerationForm from "../components/ContentCard";
 import ResearchDataCard from "../components/ResearchDataCard";
+import VideoCreatorCard from "../components/VideoCreatorCard";
 import CreativeWriterCard from "../components/CreativeWriterCard";
 import QualityControlCard from "../components/QualityControlCard";
 import PublishingCard from "../components/PublishingCard";
@@ -201,6 +203,19 @@ const Dashboard: React.FC = () => {
 					</h3>
 				</div>
 				<ContentGenerationForm />
+			</motion.div>
+
+			{/* Video Creator */}
+			<motion.div className="mb-8" variants={itemVariants}>
+				<div className="flex items-center gap-3 mb-6">
+					<div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
+						<Video className="w-5 h-5 text-white" />
+					</div>
+					<h3 className="text-xl font-bold text-gray-800">
+						AI Video Creator
+					</h3>
+				</div>
+				<VideoCreatorCard />
 			</motion.div>
 
 			{/* Research Agent */}

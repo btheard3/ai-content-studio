@@ -39,6 +39,11 @@ class WorkflowRequest(BaseModel):
 class AgentRequest(BaseModel):
     text: str
 
+class VideoRequest(BaseModel):
+    text: str
+    template_id: str = "default"
+    voice_id: str = "en-US-1"
+
 @app.post("/run_workflow")
 def run_workflow(request: WorkflowRequest):
     """Execute the complete multi-agent workflow with real research data"""
@@ -73,6 +78,83 @@ def run_workflow(request: WorkflowRequest):
         print(f"💥 {error_msg}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=error_msg)
+
+@app.post("/generate_video")
+def generate_video(request: VideoRequest):
+    """Generate video using Elai AI"""
+    try:
+        print(f"🎬 Starting video generation with text: {request.text[:100]}...")
+        
+        from backend.agent_base import AgentInput
+        input_data = AgentInput.from_text(request.text)
+        result = executor.run_agent("elai_video_agent", input_data)
+        
+        if result.data.get("status") == "completed":
+            print("✅ Video generation completed successfully")
+            return {
+                "success": True,
+                "video_url": result.data.get("video_url"),
+                "video_id": result.data.get("video_id"),
+                "processing_time": result.data.get("processing_time"),
+                "status": "completed"
+            }
+        elif result.data.get("status") == "error":
+            print(f"❌ Video generation failed: {result.data.get('error')}")
+            return {
+                "success": False,
+                "error": result.data.get("error"),
+                "status": "error"
+            }
+        else:
+            return {
+                "success": False,
+                "error": "Video generation status unknown",
+                "status": result.data.get("status", "unknown")
+            }
+            
+    except Exception as e:
+        error_msg = f"Video generation error: {str(e)}"
+        print(f"💥 {error_msg}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=error_msg)
+
+@app.get("/video/templates")
+def get_video_templates():
+    """Get available video templates"""
+    try:
+        from backend.elai_video.agent import ElaiVideoAgent
+        agent = ElaiVideoAgent()
+        templates = agent.get_video_templates()
+        return {
+            "success": True,
+            "templates": templates
+        }
+    except Exception as e:
+        print(f"❌ Error getting templates: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "templates": []
+        }
+
+@app.get("/video/voices")
+def get_video_voices():
+    """Get available video voices"""
+    try:
+        from backend.elai_video.agent import ElaiVideoAgent
+        agent = ElaiVideoAgent()
+        voices = agent.get_available_voices()
+        return {
+            "success": True,
+            "voices": voices
+        }
+    except Exception as e:
+        print(f"❌ Error getting voices: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "voices": []
+        }
 
 @app.post("/run/{agent_id}")
 def run_agent(agent_id: str, request: AgentRequest):
@@ -153,6 +235,9 @@ def read_root():
         "endpoints": {
             "workflow": "/run_workflow",
             "single_agent": "/run/{agent_id}",
+            "video_generation": "/generate_video",
+            "video_templates": "/video/templates",
+            "video_voices": "/video/voices",
             "workflow_info": "/workflow/info",
             "agents": "/agents",
             "research": "/api/research/*",
