@@ -30,7 +30,7 @@ class VideoGeneratorAgent(BaseAgent):
         return ["video_script", "title", "creative_draft", "campaign_theme", "final_content"]
 
     def get_output_keys(self) -> list:
-        return ["video_url", "video_status", "video_id", "processing_time", "video_metadata"]
+        return ["video_url", "video_status", "video_id", "processing_time", "video_metadata", "error", "agent"]
 
     def run(self, input_data: AgentInput) -> AgentOutput:
         start_time = datetime.now()

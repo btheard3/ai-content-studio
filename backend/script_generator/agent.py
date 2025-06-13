@@ -21,7 +21,7 @@ class ScriptGeneratorAgent(BaseAgent):
         return ["user_prompt", "text"]
 
     def get_output_keys(self) -> list:
-        return ["video_script"]
+        return ["video_script", "status", "agent", "error"]
 
     def run(self, input_data: AgentInput) -> AgentOutput:
         try:
@@ -35,9 +35,10 @@ class ScriptGeneratorAgent(BaseAgent):
             if not prompt:
                 logger.warning("❌ No prompt provided")
                 return AgentOutput.from_dict({
-                    "video_script": "No prompt provided.",
+                    "video_script": "",
                     "status": "error",
-                    "agent": self.name
+                    "agent": self.name,
+                    "error": "No prompt provided for script generation"
                 })
 
             logger.info("🤖 Calling OpenAI GPT-4 for script generation...")
@@ -72,7 +73,7 @@ class ScriptGeneratorAgent(BaseAgent):
         except Exception as e:
             logger.error(f"💥 Script generation failed: {str(e)}")
             return AgentOutput.from_dict({
-                "video_script": f"Error generating script: {str(e)}",
+                "video_script": "",
                 "status": "error",
                 "agent": self.name,
                 "error": str(e)

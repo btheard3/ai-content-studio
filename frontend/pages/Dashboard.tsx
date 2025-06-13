@@ -40,41 +40,65 @@ function isPublishingOutput(obj: any): obj is PublishingOutput {
 		typeof obj.publication_metadata === 'object';
 }
 
+// Safe JSON parser for agent outputs
+function safeParseAgentOutput(output: any, fallback: any = {}) {
+	if (!output) return fallback;
+	
+	// If it's already an object, return it
+	if (typeof output === 'object') return output;
+	
+	// If it's a string, try to parse it
+	if (typeof output === 'string') {
+		try {
+			return JSON.parse(output);
+		} catch (e) {
+			console.error("Failed to parse agent output:", e);
+			return { error: "Invalid output format", raw_output: output };
+		}
+	}
+	
+	return fallback;
+}
+
 const Dashboard: React.FC = () => {
 	const { agents, activeWorkflows, completedItems } = useAgents();
 
-	// Extract outputs and parse JSON if necessary with proper typing
+	// Extract outputs and parse JSON safely with proper typing
 	let qualityControlOutput: QualityControlOutput | null = null;
 	let publishingOutput: PublishingOutput | null = null;
+	let videoOutput: any = null;
 
 	const qualityAgent = agents.find((a) => a.id === "quality_control");
 	const publishingAgent = agents.find((a) => a.id === "publishing_agent");
+	const videoAgent = agents.find((a) => a.id === "video_generator");
 
-	try {
-		// Handle quality control output
-		if (qualityAgent?.output) {
-			const parsed = typeof qualityAgent.output === "string" 
-				? JSON.parse(qualityAgent.output) 
-				: qualityAgent.output;
-			
-			if (isQualityControlOutput(parsed)) {
-				qualityControlOutput = parsed;
-			}
+	// Handle quality control output
+	if (qualityAgent?.output) {
+		const parsed = safeParseAgentOutput(qualityAgent.output);
+		if (isQualityControlOutput(parsed)) {
+			qualityControlOutput = parsed;
 		}
+	}
 
-		// Handle publishing output
-		if (publishingAgent?.output) {
-			const parsed = typeof publishingAgent.output === "string" 
-				? JSON.parse(publishingAgent.output) 
-				: publishingAgent.output;
-			
-			if (isPublishingOutput(parsed)) {
-				publishingOutput = parsed;
-			}
+	// Handle publishing output
+	if (publishingAgent?.output) {
+		const parsed = safeParseAgentOutput(publishingAgent.output);
+		if (isPublishingOutput(parsed)) {
+			publishingOutput = parsed;
 		}
-	} catch (e) {
-		console.error("Failed to parse agent output:", e);
-		// Keep outputs as null on parse error
+	}
+
+	// Handle video output
+	if (videoAgent?.output) {
+		videoOutput = safeParseAgentOutput(videoAgent.output, {
+			video_status: "idle",
+			video_url: "",
+			video_id: "",
+			processing_time: 0,
+			video_metadata: {},
+			error: "",
+			agent: videoAgent.name
+		});
 	}
 
 	const kpiCards = [
@@ -218,16 +242,13 @@ const Dashboard: React.FC = () => {
 					</h3>
 				</div>
 				<VideoCard
-					video_url=""
-					video_status="processing"
-					video_id="sample_video"
-					processing_time={0}
-					video_metadata={{
-						script_length: 0,
-						campaign_theme: "AI Content Strategy",
-						created_at: new Date().toISOString(),
-						duration_estimate: 60
-					}}
+					video_url={videoOutput?.video_url || ""}
+					video_status={videoOutput?.video_status || "idle"}
+					video_id={videoOutput?.video_id || ""}
+					processing_time={videoOutput?.processing_time || 0}
+					video_metadata={videoOutput?.video_metadata || {}}
+					error={videoOutput?.error || ""}
+					agent={videoOutput?.agent || "Tavus AI"}
 				/>
 			</motion.div>
 

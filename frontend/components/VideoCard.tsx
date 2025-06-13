@@ -25,14 +25,18 @@ interface VideoCardProps {
     created_at?: string;
     duration_estimate?: number;
   };
+  error?: string;
+  agent?: string;
 }
 
 const VideoCard: React.FC<VideoCardProps> = ({
-  video_url,
-  video_status = 'processing',
-  video_id,
-  processing_time,
-  video_metadata
+  video_url = "",
+  video_status = "idle",
+  video_id = "",
+  processing_time = 0,
+  video_metadata = {},
+  error = "",
+  agent = ""
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [videoError, setVideoError] = useState(false);
@@ -101,6 +105,12 @@ const VideoCard: React.FC<VideoCardProps> = ({
     }
   };
 
+  // Handle cases where video_status might be undefined or empty
+  const safeStatus = video_status || "idle";
+  const hasError = error || safeStatus === "error";
+  const isCompleted = safeStatus === "completed" && video_url;
+  const isProcessing = safeStatus === "processing";
+
   return (
     <motion.div 
       className="card overflow-hidden"
@@ -120,12 +130,14 @@ const VideoCard: React.FC<VideoCardProps> = ({
           </motion.div>
           <div>
             <h3 className="text-xl font-bold text-gray-800">AI Generated Video</h3>
-            <p className="text-sm text-gray-500">Powered by Tavus AI</p>
+            <p className="text-sm text-gray-500">
+              {agent ? `Powered by ${agent}` : "Powered by Tavus AI"}
+            </p>
           </div>
         </div>
         
         <div className="flex items-center gap-2">
-          {video_metadata && (
+          {video_metadata && Object.keys(video_metadata).length > 0 && (
             <motion.button
               onClick={() => setIsExpanded(!isExpanded)}
               className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
@@ -141,28 +153,34 @@ const VideoCard: React.FC<VideoCardProps> = ({
 
       {/* Status Header */}
       <motion.div 
-        className={`flex items-center justify-between p-4 border-2 rounded-xl mb-6 ${getStatusColor(video_status)}`}
+        className={`flex items-center justify-between p-4 border-2 rounded-xl mb-6 ${getStatusColor(safeStatus)}`}
         initial={{ scale: 0.95 }}
         animate={{ scale: 1 }}
         transition={{ delay: 0.2 }}
       >
         <div className="flex items-center">
-          {getStatusIcon(video_status)}
+          {getStatusIcon(safeStatus)}
           <div className="ml-3">
             <span className="font-semibold text-lg">
-              Video {video_status === 'completed' ? 'Generated Successfully' : 
-                     video_status === 'error' ? 'Generation Failed' : 
-                     'Processing...'}
+              {isCompleted ? 'Video Generated Successfully' : 
+               hasError ? 'Video Generation Failed' : 
+               isProcessing ? 'Video Processing...' :
+               'Video Ready to Generate'}
             </span>
-            {processing_time && (
+            {processing_time > 0 && (
               <p className="text-sm opacity-75 mt-1">
                 Processing time: {processing_time.toFixed(1)}s
+              </p>
+            )}
+            {hasError && error && (
+              <p className="text-sm opacity-75 mt-1 text-red-600">
+                Error: {error}
               </p>
             )}
           </div>
         </div>
         
-        {video_status === 'completed' && video_url && (
+        {isCompleted && (
           <div className="flex items-center gap-2">
             <motion.button
               onClick={handleDownload}
@@ -187,7 +205,7 @@ const VideoCard: React.FC<VideoCardProps> = ({
       </motion.div>
 
       {/* Video Player */}
-      {video_status === 'completed' && video_url && (
+      {isCompleted && (
         <motion.div 
           className="mb-6"
           initial={{ opacity: 0, y: 20 }}
@@ -227,7 +245,7 @@ const VideoCard: React.FC<VideoCardProps> = ({
             <div className="flex items-center gap-4">
               <span className="flex items-center gap-1">
                 <FileVideo className="w-4 h-4" />
-                Video ID: {video_id}
+                Video ID: {video_id || "N/A"}
               </span>
               {video_metadata?.duration_estimate && (
                 <span className="flex items-center gap-1">
@@ -236,22 +254,24 @@ const VideoCard: React.FC<VideoCardProps> = ({
                 </span>
               )}
             </div>
-            <a
-              href={video_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 text-purple-600 hover:text-purple-800 font-medium"
-            >
-              Open in new tab
-              <ExternalLink className="w-3 h-3" />
-            </a>
+            {video_url && (
+              <a
+                href={video_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-purple-600 hover:text-purple-800 font-medium"
+              >
+                Open in new tab
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            )}
           </div>
         </motion.div>
       )}
 
       {/* Video Metadata */}
       <AnimatePresence>
-        {isExpanded && video_metadata && (
+        {isExpanded && video_metadata && Object.keys(video_metadata).length > 0 && (
           <motion.div
             className="p-4 bg-gray-50 rounded-xl mb-6"
             initial={{ opacity: 0, height: 0 }}
@@ -300,7 +320,7 @@ const VideoCard: React.FC<VideoCardProps> = ({
       </AnimatePresence>
 
       {/* Processing State */}
-      {video_status === 'processing' && (
+      {isProcessing && (
         <motion.div 
           className="text-center py-8"
           initial={{ opacity: 0 }}
@@ -325,7 +345,7 @@ const VideoCard: React.FC<VideoCardProps> = ({
       )}
 
       {/* Error State */}
-      {video_status === 'error' && (
+      {hasError && (
         <motion.div 
           className="text-center py-8"
           initial={{ opacity: 0 }}
@@ -337,7 +357,27 @@ const VideoCard: React.FC<VideoCardProps> = ({
             <div>
               <h4 className="font-semibold text-gray-800 mb-2">Video Generation Failed</h4>
               <p className="text-sm text-gray-600">
-                There was an issue generating your video. Please check your Tavus API configuration and try again.
+                {error || "There was an issue generating your video. Please check your Tavus API configuration and try again."}
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Idle State */}
+      {safeStatus === "idle" && (
+        <motion.div 
+          className="text-center py-8"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+        >
+          <div className="flex flex-col items-center gap-4">
+            <Play className="w-12 h-12 text-gray-400" />
+            <div>
+              <h4 className="font-semibold text-gray-800 mb-2">Ready to Generate</h4>
+              <p className="text-sm text-gray-600">
+                Enter a prompt above to start generating your AI video.
               </p>
             </div>
           </div>

@@ -15,6 +15,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { useApi, apiService } from '../hooks/useApi';
+import VideoCard from '../components/VideoCard';
 
 interface VideoTaskResponse {
   success: boolean;
@@ -92,6 +93,16 @@ const VideoPage: React.FC = () => {
         return 'border-gray-200 bg-gray-50';
     }
   };
+
+  // Safe parsing of video result
+  const safeVideoOutput = videoResult?.output ? {
+    video_url: videoResult.output.video_url || "",
+    video_status: videoResult.output.video_status || "idle",
+    video_id: videoResult.output.video_id || "",
+    processing_time: videoResult.output.processing_time || 0,
+    video_metadata: videoResult.output.video_metadata || {},
+    video_script: videoResult.output.video_script || ""
+  } : null;
 
   return (
     <div className="px-4 py-6 md:px-6 md:py-8">
@@ -322,7 +333,7 @@ const VideoPage: React.FC = () => {
                   </div>
                 </div>
                 
-                {videoResult.success && videoResult.output?.video_url && (
+                {videoResult.success && safeVideoOutput?.video_url && (
                   <div className="flex items-center gap-2">
                     <motion.button
                       className="p-2 bg-white bg-opacity-50 rounded-lg hover:bg-opacity-75 transition-all"
@@ -345,7 +356,7 @@ const VideoPage: React.FC = () => {
               </motion.div>
 
               {/* Generated Script Display */}
-              {videoResult.output?.video_script && (
+              {safeVideoOutput?.video_script && (
                 <motion.div 
                   className="p-4 border-2 border-blue-200 bg-blue-50 rounded-xl"
                   initial={{ opacity: 0, y: 20 }}
@@ -358,55 +369,31 @@ const VideoPage: React.FC = () => {
                   </div>
                   <div className="bg-white p-4 rounded-lg">
                     <pre className="whitespace-pre-wrap text-sm text-gray-700 font-mono">
-                      {videoResult.output.video_script}
+                      {safeVideoOutput.video_script}
                     </pre>
                   </div>
                   <div className="mt-3 text-xs text-blue-600">
-                    Script length: {videoResult.output.video_script.length} characters
+                    Script length: {safeVideoOutput.video_script.length} characters
                   </div>
                 </motion.div>
               )}
 
-              {/* Video Player */}
-              {videoResult.success && videoResult.output?.video_url && (
-                <motion.div 
-                  className="p-4 border-2 border-gray-200 bg-gray-50 rounded-xl"
+              {/* Video Card Component */}
+              {safeVideoOutput && (
+                <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.5 }}
                 >
-                  <div className="flex items-center gap-3 mb-4">
-                    <Video className="w-5 h-5 text-purple-600" />
-                    <h4 className="font-semibold text-gray-800">Your AI Generated Video</h4>
-                  </div>
-                  
-                  <div className="relative bg-black rounded-lg overflow-hidden">
-                    <video
-                      controls
-                      className="w-full h-auto max-h-96"
-                      poster="/api/placeholder/800/450"
-                    >
-                      <source src={videoResult.output.video_url} type="video/mp4" />
-                      Your browser does not support the video tag.
-                    </video>
-                  </div>
-                  
-                  <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
-                    <div className="flex items-center gap-4">
-                      <span>Video ID: {videoResult.output.video_id}</span>
-                      {videoResult.output.processing_time && (
-                        <span>Processing: {videoResult.output.processing_time.toFixed(1)}s</span>
-                      )}
-                    </div>
-                    <a
-                      href={videoResult.output.video_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-purple-600 hover:text-purple-800 font-medium"
-                    >
-                      Open in new tab →
-                    </a>
-                  </div>
+                  <VideoCard
+                    video_url={safeVideoOutput.video_url}
+                    video_status={safeVideoOutput.video_status}
+                    video_id={safeVideoOutput.video_id}
+                    processing_time={safeVideoOutput.processing_time}
+                    video_metadata={safeVideoOutput.video_metadata}
+                    error={videoResult.error}
+                    agent="Tavus AI"
+                  />
                 </motion.div>
               )}
 
