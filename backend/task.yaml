@@ -1,27 +1,90 @@
-version: 1
-entry_point: script_generator
+# Multi-agent content generation workflow configuration
+entry_point: "content_generation_workflow"
 
 agents:
   content_strategist:
     spec_path: "content_strategist/agent.py"
-    input_keys: ["user_prompt"]
-    output_keys: ["content_roadmap", "campaign_theme"]
+    input_keys: ["text"]
+    output_keys: ["content_roadmap", "campaign_theme", "key_pillars"]
+    
+  research_data:
+    spec_path: "research_data/agent.py"
+    input_keys: ["content_roadmap", "campaign_theme", "text"]
+    output_keys: ["research_summary", "trending_topics", "statistics", "research_data"]
+    
+  creative_writer:
+    spec_path: "creative_writer/agent.py"
+    input_keys: ["content_roadmap", "research_summary", "campaign_theme", "key_pillars"]
+    output_keys: ["creative_draft", "content_sections", "tone_analysis"]
+    
+  quality_control:
+    spec_path: "quality_control/agent.py"
+    input_keys: ["creative_draft", "content_sections", "campaign_theme"]
+    output_keys: ["final_content", "quality_score", "improvements_made"]
+    
+  publishing_agent:
+    spec_path: "publishing_agent/agent.py"
+    input_keys: ["final_content", "campaign_theme"]
+    output_keys: ["published_status", "distribution_channels", "publication_metadata"]
 
   script_generator:
-    spec_path: "script_generator/agent.py"
+    spec_path: "backend/script_generator/agent.py"
     input_keys: ["user_prompt"]
     output_keys: ["video_script"]
 
   video_generator:
-    spec_path: "video_generator/agent.py"
-    input_keys: ["video_script", "title"]
-    output_keys: ["video_url", "video_status"]
+    spec_path: "backend/video_generator/agent.py"
+    input_keys: ["creative_draft", "campaign_theme", "final_content"]
+    output_keys: ["video_url", "video_status", "video_id", "processing_time", "video_metadata"]
 
-workflows:
-  video_workflow:
-    agent: script_generator
-    next: video_generator
+  elai_video_agent:
+    spec_path: "backend/elai_video/agent.py"
+    input_keys: ["text"]
+    output_keys: ["video_url", "status", "video_id", "processing_time"]
 
-  video_generator:
-    agent: video_generator
-    next: null
+  code_generator_agent:
+    spec_path: "backend/code_generator/agent.py"
+    input_keys: ["description", "language", "framework", "complexity", "include_tests"]
+    output_keys: ["generated_code", "test_files", "documentation", "setup_instructions", "api_docs"]
+
+workflow:
+  stages:
+    - agent: content_strategist
+      name: "Strategic Planning"
+      description: "Generate content strategy and campaign theme"
+      
+    - agent: research_data
+      name: "Research & Data Collection"
+      description: "Gather relevant research and data"
+      
+    - agent: creative_writer
+      name: "Creative Content Writing"
+      description: "Create engaging content based on strategy and research"
+      
+    - agent: quality_control
+      name: "Quality Assurance"
+      description: "Review and improve content quality"
+      
+    - agent: video_generator
+      name: "Video Generation"
+      description: "Generate AI video from content using Tavus"
+      
+    - agent: publishing_agent
+      name: "Publishing & Distribution"
+      description: "Format and distribute final content"
+
+video_workflow:
+  stages:
+    - agent: script_generator
+      name: "Script Generation"
+      description: "Generate video script using OpenAI"
+      
+    - agent: video_generator
+      name: "Video Generation"
+      description: "Generate video from script using Tavus AI"
+
+code_workflow:
+  stages:
+    - agent: code_generator_agent
+      name: "Code Generation"
+      description: "Generate clean, documented code in multiple languages"

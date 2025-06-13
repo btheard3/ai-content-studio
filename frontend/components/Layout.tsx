@@ -12,7 +12,8 @@ import {
   Bell,
   Search as SearchIcon,
   Database,
-  Code
+  Code,
+  Video
 } from "lucide-react";
 
 type LayoutProps = {
@@ -40,6 +41,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       icon: <Database className="w-5 h-5" />,
       label: "Research",
       description: "Data & insights"
+    },
+    {
+      to: "/video",
+      icon: <Video className="w-5 h-5" />,
+      label: "AI Video",
+      description: "Video generation"
     },
     {
       to: "/code",
