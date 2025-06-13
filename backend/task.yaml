@@ -22,9 +22,14 @@ agents:
     input_keys: ["creative_draft", "content_sections", "campaign_theme"]
     output_keys: ["final_content", "quality_score", "improvements_made"]
     
+  video_generator:
+    spec_path: "backend/video_generator/agent.py"
+    input_keys: ["creative_draft", "campaign_theme", "final_content"]
+    output_keys: ["video_url", "video_status", "video_id", "processing_time", "video_metadata"]
+    
   publishing_agent:
     spec_path: "publishing_agent/agent.py"
-    input_keys: ["final_content", "campaign_theme"]
+    input_keys: ["final_content", "campaign_theme", "video_url"]
     output_keys: ["published_status", "distribution_channels", "publication_metadata"]
 
   elai_video_agent:
@@ -55,9 +60,13 @@ workflow:
       name: "Quality Assurance"
       description: "Review and improve content quality"
       
+    - agent: video_generator
+      name: "AI Video Generation"
+      description: "Generate video content using Tavus AI"
+      
     - agent: publishing_agent
       name: "Publishing & Distribution"
-      description: "Format and distribute final content"
+      description: "Format and distribute final content with video"
 
 video_workflow:
   stages:

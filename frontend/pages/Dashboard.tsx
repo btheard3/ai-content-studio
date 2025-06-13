@@ -9,7 +9,8 @@ import {
 	Target,
 	BookOpen,
 	UploadCloud,
-	Code
+	Code,
+	Video
 } from "lucide-react";
 import ContentGenerationForm from "../components/ContentCard";
 import ResearchDataCard from "../components/ResearchDataCard";
@@ -17,6 +18,7 @@ import CodeGeneratorCard from "../components/CodeGeneratorCard";
 import CreativeWriterCard from "../components/CreativeWriterCard";
 import QualityControlCard from "../components/QualityControlCard";
 import PublishingCard from "../components/PublishingCard";
+import VideoCard from "../components/VideoCard";
 import { useAgents } from "../context/AgentContext";
 import { QualityControlOutput, PublishingOutput } from "../types";
 
@@ -203,6 +205,31 @@ const Dashboard: React.FC = () => {
 					</h3>
 				</div>
 				<ContentGenerationForm />
+			</motion.div>
+
+			{/* AI Video Generator */}
+			<motion.div className="mb-8" variants={itemVariants}>
+				<div className="flex items-center gap-3 mb-6">
+					<div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
+						<Video className="w-5 h-5 text-white" />
+					</div>
+					<h3 className="text-xl font-bold text-gray-800">
+						AI Video Generator (Tavus)
+					</h3>
+				</div>
+				<VideoCard
+					video_url="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+					video_status="completed"
+					video_id="demo_tavus_video"
+					processing_time={45.2}
+					video_metadata={{
+						script_length: 850,
+						campaign_theme: "AI Content Strategy",
+						created_at: new Date().toISOString(),
+						duration_estimate: 90
+					}}
+					demo_mode={true}
+				/>
 			</motion.div>
 
 			{/* Code Generator */}

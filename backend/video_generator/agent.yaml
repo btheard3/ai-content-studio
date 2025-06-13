@@ -1,0 +1,6 @@
+id: video_generator
+name: Video Generator Agent
+entry_point: backend.video_generator.agent:VideoGeneratorAgent
+description: Generates AI videos from content using Tavus API
+input_keys: ["creative_draft", "campaign_theme", "final_content"]
+output_keys: ["video_url", "video_status", "video_id", "processing_time", "video_metadata"]
