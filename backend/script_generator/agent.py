@@ -18,6 +18,9 @@ class ScriptGeneratorAgent(BaseAgent):
         return ["video_script"]
 
     def run(self, input_data: AgentInput) -> AgentOutput:
+        print("DEBUG INPUT:", input_data)
+        print("RAW DICT:", input_data.dict())
+        print("DEBUG INPUT:", input_data.dict())
         prompt = input_data.get("user_prompt", "")
         if not prompt:
             return AgentOutput({"video_script": "No prompt provided."})

@@ -1,3 +1,5 @@
 name: script_generator
 class_path: backend.script_generator.agent.ScriptGeneratorAgent
 description: Generates a short promotional video script using OpenAI.
+input_keys: ["user_prompt"]
+output_keys: ["video_script"]
