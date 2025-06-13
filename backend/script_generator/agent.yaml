@@ -1,0 +1,6 @@
+id: script_generator
+name: Script Generator Agent
+entry_point: backend.script_generator.agent:ScriptGeneratorAgent
+description: Generates a short promotional video script using OpenAI GPT-4
+input_keys: ["user_prompt", "text"]
+output_keys: ["video_script"]
