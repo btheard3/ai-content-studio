@@ -66,7 +66,6 @@ The backend will be available at `http://localhost:8000`
 
 1. Install Node.js dependencies:
 ```bash
-cd frontend
 npm install
 ```
 
@@ -156,7 +155,6 @@ Run the test suite:
 python backend/test_research.py
 
 # Frontend tests (if implemented)
-cd frontend
 npm test
 ```
 
