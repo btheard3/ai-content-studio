@@ -11,34 +11,23 @@ import {
   Settings,
   Clock,
   FileVideo,
-  Mic,
-  Palette,
   RefreshCw,
-  Info,
   Sparkles
 } from 'lucide-react';
 import { useApi, apiService } from '../hooks/useApi';
 
-interface VideoWorkflowResponse {
+interface VideoTaskResponse {
   success: boolean;
-  data?: {
+  output?: {
     video_script: string;
     video_url: string;
     video_id: string;
     video_status: string;
     processing_time: number;
     video_metadata: any;
-    title: string;
   };
-  stages_completed?: Array<{
-    agent_id: string;
-    stage_name: string;
-    status: string;
-    output_keys: string[];
-  }>;
   error?: string;
   stage?: string;
-  script?: string;
 }
 
 const VideoPage: React.FC = () => {
@@ -52,20 +41,23 @@ const VideoPage: React.FC = () => {
     error,
     execute: generateVideo,
     reset
-  } = useApi<VideoWorkflowResponse>(apiService.runVideoWorkflow);
+  } = useApi<VideoTaskResponse>(apiService.runTask);
 
   const handleGenerateVideo = async () => {
     if (!prompt.trim()) return;
 
     const result = await generateVideo({
-      user_prompt: prompt.trim(),
-      title: title.trim() || prompt.trim()
+      inputs: {
+        user_prompt: prompt.trim(),
+        text: "placeholder", // Required for ADK compatibility
+        title: title.trim() || prompt.trim()
+      }
     });
 
     if (result?.success) {
-      console.log('✅ Video workflow completed successfully:', result);
+      console.log('✅ Video task completed successfully:', result);
     } else {
-      console.error('❌ Video workflow failed:', result?.error);
+      console.error('❌ Video task failed:', result?.error);
     }
   };
 
@@ -322,15 +314,15 @@ const VideoPage: React.FC = () => {
                   )}
                   <div>
                     <span className="font-semibold text-lg">
-                      Video Workflow {videoResult.success ? "Completed Successfully" : "Failed"}
+                      Video Task {videoResult.success ? "Completed Successfully" : "Failed"}
                     </span>
                     <p className="text-sm opacity-75 mt-1">
-                      {videoResult.stages_completed?.length || 0} stages processed
+                      Script generation and video creation pipeline
                     </p>
                   </div>
                 </div>
                 
-                {videoResult.success && videoResult.data?.video_url && (
+                {videoResult.success && videoResult.output?.video_url && (
                   <div className="flex items-center gap-2">
                     <motion.button
                       className="p-2 bg-white bg-opacity-50 rounded-lg hover:bg-opacity-75 transition-all"
@@ -352,48 +344,8 @@ const VideoPage: React.FC = () => {
                 )}
               </motion.div>
 
-              {/* Workflow Stages */}
-              {videoResult.stages_completed && videoResult.stages_completed.length > 0 && (
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-gray-800 text-lg">Workflow Pipeline:</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {videoResult.stages_completed.map((stage, index) => (
-                      <motion.div
-                        key={stage.agent_id}
-                        className={`p-4 border-2 rounded-xl ${getStatusColor(stage.status)}`}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.3 + index * 0.1 }}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            {getStatusIcon(stage.status)}
-                            <div className="ml-3">
-                              <span className="font-semibold">{stage.stage_name}</span>
-                              <span className="ml-2 text-sm text-gray-500">({stage.agent_id})</span>
-                            </div>
-                          </div>
-                        </div>
-                        {stage.output_keys && stage.output_keys.length > 0 && (
-                          <div className="mt-2 flex flex-wrap gap-1">
-                            {stage.output_keys.map((key) => (
-                              <span 
-                                key={key}
-                                className="px-2 py-1 bg-white bg-opacity-50 text-xs rounded-full"
-                              >
-                                {key}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </motion.div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               {/* Generated Script Display */}
-              {(videoResult.data?.video_script || videoResult.script) && (
+              {videoResult.output?.video_script && (
                 <motion.div 
                   className="p-4 border-2 border-blue-200 bg-blue-50 rounded-xl"
                   initial={{ opacity: 0, y: 20 }}
@@ -406,17 +358,17 @@ const VideoPage: React.FC = () => {
                   </div>
                   <div className="bg-white p-4 rounded-lg">
                     <pre className="whitespace-pre-wrap text-sm text-gray-700 font-mono">
-                      {videoResult.data?.video_script || videoResult.script}
+                      {videoResult.output.video_script}
                     </pre>
                   </div>
                   <div className="mt-3 text-xs text-blue-600">
-                    Script length: {(videoResult.data?.video_script || videoResult.script || '').length} characters
+                    Script length: {videoResult.output.video_script.length} characters
                   </div>
                 </motion.div>
               )}
 
               {/* Video Player */}
-              {videoResult.success && videoResult.data?.video_url && (
+              {videoResult.success && videoResult.output?.video_url && (
                 <motion.div 
                   className="p-4 border-2 border-gray-200 bg-gray-50 rounded-xl"
                   initial={{ opacity: 0, y: 20 }}
@@ -434,20 +386,20 @@ const VideoPage: React.FC = () => {
                       className="w-full h-auto max-h-96"
                       poster="/api/placeholder/800/450"
                     >
-                      <source src={videoResult.data.video_url} type="video/mp4" />
+                      <source src={videoResult.output.video_url} type="video/mp4" />
                       Your browser does not support the video tag.
                     </video>
                   </div>
                   
                   <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
                     <div className="flex items-center gap-4">
-                      <span>Video ID: {videoResult.data.video_id}</span>
-                      {videoResult.data.processing_time && (
-                        <span>Processing: {videoResult.data.processing_time.toFixed(1)}s</span>
+                      <span>Video ID: {videoResult.output.video_id}</span>
+                      {videoResult.output.processing_time && (
+                        <span>Processing: {videoResult.output.processing_time.toFixed(1)}s</span>
                       )}
                     </div>
                     <a
-                      href={videoResult.data.video_url}
+                      href={videoResult.output.video_url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-purple-600 hover:text-purple-800 font-medium"

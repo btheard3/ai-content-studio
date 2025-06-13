@@ -34,7 +34,7 @@ agents:
 
   video_generator:
     spec_path: "backend/video_generator/agent.py"
-    input_keys: ["creative_draft", "campaign_theme", "final_content"]
+    input_keys: ["video_script", "title", "creative_draft", "campaign_theme", "final_content"]
     output_keys: ["video_url", "video_status", "video_id", "processing_time", "video_metadata"]
 
   elai_video_agent:

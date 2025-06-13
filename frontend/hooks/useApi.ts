@@ -67,6 +67,11 @@ export const apiService = {
     return response.data;
   },
 
+  runTask: async (data: { inputs: { user_prompt: string; text: string; title: string } }) => {
+    const response = await axios.post('http://localhost:8000/run_task', data);
+    return response.data;
+  },
+
   runVideoWorkflow: async (data: { user_prompt: string; title?: string }) => {
     const response = await axios.post('http://localhost:8000/run_video_workflow', data);
     return response.data;

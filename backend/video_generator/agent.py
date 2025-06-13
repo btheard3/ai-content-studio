@@ -27,7 +27,7 @@ class VideoGeneratorAgent(BaseAgent):
             logger.info("✅ Tavus API key configured")
 
     def get_input_keys(self) -> list:
-        return ["creative_draft", "campaign_theme", "final_content"]
+        return ["video_script", "title", "creative_draft", "campaign_theme", "final_content"]
 
     def get_output_keys(self) -> list:
         return ["video_url", "video_status", "video_id", "processing_time", "video_metadata"]
@@ -37,13 +37,15 @@ class VideoGeneratorAgent(BaseAgent):
         logger.info("🚀 Starting video generation process")
         
         try:
-            # Extract content for video script
+            # Extract content for video script - prioritize video_script, then final_content, then creative_draft
+            video_script = input_data.get("video_script", "")
             creative_draft = input_data.get("creative_draft", "")
             final_content = input_data.get("final_content", "")
-            campaign_theme = input_data.get("campaign_theme", "AI Generated Content")
+            title = input_data.get("title", "AI Generated Video")
+            campaign_theme = input_data.get("campaign_theme", title)
             
-            # Use final_content if available, otherwise creative_draft
-            script_content = final_content or creative_draft
+            # Use video_script if available, otherwise final_content, otherwise creative_draft
+            script_content = video_script or final_content or creative_draft
             
             if not script_content:
                 logger.warning("❌ No content provided for video generation")
@@ -70,13 +72,16 @@ class VideoGeneratorAgent(BaseAgent):
                 })
 
             logger.info(f"📝 Script content length: {len(script_content)} characters")
-            logger.info(f"🎯 Campaign theme: {campaign_theme}")
+            logger.info(f"🎯 Title: {title}")
 
-            # Create optimized video script
-            video_script = self._create_video_script(script_content, campaign_theme)
+            # Create optimized video script if we received raw content
+            if not video_script:
+                processed_script = self._create_video_script(script_content, campaign_theme)
+            else:
+                processed_script = script_content
             
             # Generate video using Tavus API
-            video_result = self._generate_video_with_tavus(video_script, campaign_theme)
+            video_result = self._generate_video_with_tavus(processed_script, title)
             
             if video_result.get("success"):
                 processing_time = (datetime.now() - start_time).total_seconds()
@@ -88,10 +93,11 @@ class VideoGeneratorAgent(BaseAgent):
                     "video_id": video_result.get("video_id", ""),
                     "processing_time": processing_time,
                     "video_metadata": {
-                        "script_length": len(video_script),
+                        "script_length": len(processed_script),
                         "campaign_theme": campaign_theme,
+                        "title": title,
                         "created_at": datetime.now().isoformat(),
-                        "duration_estimate": self._estimate_duration(video_script)
+                        "duration_estimate": self._estimate_duration(processed_script)
                     },
                     "agent": self.name
                 })
