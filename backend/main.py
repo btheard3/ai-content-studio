@@ -7,6 +7,8 @@ import uvicorn
 import yaml
 import traceback
 import logging
+from dotenv import load_dotenv
+load_dotenv()
 
 from backend.executor import AgentExecutor
 from backend.research_api import router as research_router
