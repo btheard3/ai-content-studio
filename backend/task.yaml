@@ -29,7 +29,7 @@ agents:
 
   script_generator:
     spec_path: "backend/script_generator/agent.py"
-    input_keys: ["user_prompt"]
+    input_keys: ["user_prompt", "text"]
     output_keys: ["video_script"]
 
   video_generator:
@@ -65,10 +65,6 @@ workflow:
       name: "Quality Assurance"
       description: "Review and improve content quality"
       
-    - agent: video_generator
-      name: "Video Generation"
-      description: "Generate AI video from content using Tavus"
-      
     - agent: publishing_agent
       name: "Publishing & Distribution"
       description: "Format and distribute final content"
@@ -77,7 +73,7 @@ video_workflow:
   stages:
     - agent: script_generator
       name: "Script Generation"
-      description: "Generate video script using OpenAI"
+      description: "Generate video script using OpenAI GPT-4"
       
     - agent: video_generator
       name: "Video Generation"

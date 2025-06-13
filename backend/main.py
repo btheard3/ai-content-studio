@@ -57,6 +57,10 @@ class TavusVideoRequest(BaseModel):
     script: str
     title: str = "AI Generated Video"
 
+class VideoWorkflowRequest(BaseModel):
+    user_prompt: str
+    title: str = "AI Generated Video"
+
 @app.post("/run_workflow")
 def run_workflow(request: WorkflowRequest):
     """Execute the complete multi-agent workflow with real research data and video generation"""
@@ -92,6 +96,89 @@ def run_workflow(request: WorkflowRequest):
             
     except Exception as e:
         error_msg = f"Workflow execution error: {str(e)}"
+        print(f"💥 {error_msg}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=error_msg)
+
+@app.post("/run_video_workflow")
+def run_video_workflow(request: VideoWorkflowRequest):
+    """Execute the video generation workflow: script_generator → video_generator"""
+    try:
+        print(f"🎬 Starting video workflow with prompt: {request.user_prompt[:100]}...")
+        
+        # Step 1: Generate script
+        from backend.agent_base import AgentInput
+        from backend.script_generator.agent import ScriptGeneratorAgent
+        
+        script_agent = ScriptGeneratorAgent()
+        script_input = AgentInput({
+            "user_prompt": request.user_prompt,
+            "text": request.user_prompt  # Fallback for ADK compatibility
+        })
+        
+        script_result = script_agent.run(script_input)
+        
+        if script_result.data.get("status") == "error":
+            return {
+                "success": False,
+                "error": f"Script generation failed: {script_result.data.get('error')}",
+                "stage": "script_generation"
+            }
+        
+        video_script = script_result.data.get("video_script")
+        print(f"✅ Script generated: {len(video_script)} characters")
+        
+        # Step 2: Generate video
+        from backend.video_generator.agent import VideoGeneratorAgent
+        
+        video_agent = VideoGeneratorAgent()
+        video_input = AgentInput({
+            "creative_draft": video_script,
+            "campaign_theme": request.title,
+            "final_content": video_script
+        })
+        
+        video_result = video_agent.run(video_input)
+        
+        if video_result.data.get("video_status") == "error":
+            return {
+                "success": False,
+                "error": f"Video generation failed: {video_result.data.get('error')}",
+                "stage": "video_generation",
+                "script": video_script
+            }
+        
+        print(f"✅ Video workflow completed successfully")
+        
+        return {
+            "success": True,
+            "data": {
+                "video_script": video_script,
+                "video_url": video_result.data.get("video_url"),
+                "video_id": video_result.data.get("video_id"),
+                "video_status": video_result.data.get("video_status"),
+                "processing_time": video_result.data.get("processing_time"),
+                "video_metadata": video_result.data.get("video_metadata"),
+                "title": request.title
+            },
+            "stages_completed": [
+                {
+                    "agent_id": "script_generator",
+                    "stage_name": "Script Generation",
+                    "status": "completed",
+                    "output_keys": ["video_script"]
+                },
+                {
+                    "agent_id": "video_generator", 
+                    "stage_name": "Video Generation",
+                    "status": video_result.data.get("video_status", "completed"),
+                    "output_keys": ["video_url", "video_id", "video_metadata"]
+                }
+            ]
+        }
+        
+    except Exception as e:
+        error_msg = f"Video workflow execution error: {str(e)}"
         print(f"💥 {error_msg}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=error_msg)
@@ -618,6 +705,7 @@ def read_root():
         "version": "1.0.0",
         "endpoints": {
             "workflow": "/run_workflow",
+            "video_workflow": "/run_video_workflow",
             "single_agent": "/run/{agent_id}",
             "video_generation": "/generate_video",
             "tavus_video_generation": "/generate_tavus_video",

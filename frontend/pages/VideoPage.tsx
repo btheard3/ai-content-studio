@@ -19,20 +19,31 @@ import {
 } from 'lucide-react';
 import { useApi, apiService } from '../hooks/useApi';
 
-interface VideoGenerationResponse {
+interface VideoWorkflowResponse {
   success: boolean;
-  video_url?: string;
-  video_id?: string;
-  processing_time?: number;
-  video_metadata?: any;
-  status: string;
+  data?: {
+    video_script: string;
+    video_url: string;
+    video_id: string;
+    video_status: string;
+    processing_time: number;
+    video_metadata: any;
+    title: string;
+  };
+  stages_completed?: Array<{
+    agent_id: string;
+    stage_name: string;
+    status: string;
+    output_keys: string[];
+  }>;
   error?: string;
-  demo_mode?: boolean;
+  stage?: string;
+  script?: string;
 }
 
 const VideoPage: React.FC = () => {
   const [prompt, setPrompt] = useState('');
-  const [script, setScript] = useState('');
+  const [title, setTitle] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const {
@@ -41,52 +52,27 @@ const VideoPage: React.FC = () => {
     error,
     execute: generateVideo,
     reset
-  } = useApi<VideoGenerationResponse>(apiService.generateTavusVideo);
+  } = useApi<VideoWorkflowResponse>(apiService.runVideoWorkflow);
 
   const handleGenerateVideo = async () => {
     if (!prompt.trim()) return;
 
-    try {
-      // Step 1: Generate script using OpenAI
-      const scriptResponse = await fetch('http://localhost:8000/run/script_generator', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_prompt: prompt.trim() })
-      });
+    const result = await generateVideo({
+      user_prompt: prompt.trim(),
+      title: title.trim() || prompt.trim()
+    });
 
-      if (!scriptResponse.ok) {
-        throw new Error('Failed to generate script');
-      }
-
-      const scriptData = await scriptResponse.json();
-      const generatedScript = scriptData.video_script || scriptData.output?.video_script;
-      
-      if (!generatedScript) {
-        throw new Error('No script generated');
-      }
-
-      setScript(generatedScript);
-
-      // Step 2: Generate video using Tavus
-      const result = await generateVideo({
-        script: generatedScript,
-        title: prompt.trim()
-      });
-
-      if (result?.success) {
-        console.log('✅ Video generated successfully:', result);
-      } else {
-        console.error('❌ Video generation failed:', result?.error);
-      }
-    } catch (err) {
-      console.error('Error in video generation process:', err);
+    if (result?.success) {
+      console.log('✅ Video workflow completed successfully:', result);
+    } else {
+      console.error('❌ Video workflow failed:', result?.error);
     }
   };
 
   const handleReset = () => {
     reset();
     setPrompt('');
-    setScript('');
+    setTitle('');
   };
 
   const getStatusIcon = (status: string) => {
@@ -128,7 +114,7 @@ const VideoPage: React.FC = () => {
         </div>
         <div>
           <h1 className="text-3xl font-bold text-gray-900">AI Video Generator</h1>
-          <p className="text-gray-600">Transform your ideas into engaging AI-powered videos</p>
+          <p className="text-gray-600">OpenAI Script Generation + Tavus Video Creation</p>
         </div>
       </motion.div>
 
@@ -151,7 +137,7 @@ const VideoPage: React.FC = () => {
             </motion.div>
             <div>
               <h3 className="text-xl font-bold text-gray-800">Create AI Video</h3>
-              <p className="text-sm text-gray-500">OpenAI Script + Tavus Video Generation</p>
+              <p className="text-sm text-gray-500">Prompt → Script → Video (Full Workflow)</p>
             </div>
           </div>
           
@@ -168,7 +154,7 @@ const VideoPage: React.FC = () => {
         </div>
 
         {/* Prompt Input */}
-        <div className="mb-6">
+        <div className="mb-4">
           <label className="block text-sm font-semibold text-gray-700 mb-3">
             Video Topic / Prompt
           </label>
@@ -179,7 +165,7 @@ const VideoPage: React.FC = () => {
             <textarea
               className="w-full border-2 border-gray-200 rounded-xl p-4 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent transition-all duration-300 resize-none"
               rows={4}
-              placeholder="Enter your video topic... e.g., 'Introduce our new AI-powered project management tool that helps teams collaborate 10x faster'"
+              placeholder="Enter your video topic... e.g., 'Create a video about hurricane safety tips for families'"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               disabled={loading}
@@ -188,6 +174,21 @@ const VideoPage: React.FC = () => {
               {prompt.length}/500
             </div>
           </motion.div>
+        </div>
+
+        {/* Title Input */}
+        <div className="mb-6">
+          <label className="block text-sm font-semibold text-gray-700 mb-3">
+            Video Title (Optional)
+          </label>
+          <input
+            type="text"
+            className="w-full border-2 border-gray-200 rounded-xl p-4 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent transition-all duration-300"
+            placeholder="Enter video title (will use prompt if empty)"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            disabled={loading}
+          />
         </div>
 
         {/* Advanced Options */}
@@ -256,7 +257,7 @@ const VideoPage: React.FC = () => {
             )}
           </motion.button>
 
-          {(videoResult || error || script) && (
+          {(videoResult || error) && (
             <motion.button
               onClick={handleReset}
               className="flex items-center px-4 py-3 bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-200 transition-all duration-300 font-medium"
@@ -292,33 +293,7 @@ const VideoPage: React.FC = () => {
           )}
         </AnimatePresence>
 
-        {/* Generated Script Display */}
-        <AnimatePresence>
-          {script && (
-            <motion.div 
-              className="mb-6 p-4 border-2 border-blue-200 bg-blue-50 rounded-xl"
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              <div className="flex items-center gap-3 mb-3">
-                <FileVideo className="w-5 h-5 text-blue-600" />
-                <h4 className="font-semibold text-blue-800">Generated Script</h4>
-              </div>
-              <div className="bg-white p-4 rounded-lg">
-                <pre className="whitespace-pre-wrap text-sm text-gray-700 font-mono">
-                  {script}
-                </pre>
-              </div>
-              <div className="mt-3 text-xs text-blue-600">
-                Script length: {script.length} characters • ~{Math.ceil(script.split(' ').length / 150)} minutes
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Video Results */}
+        {/* Workflow Results */}
         <AnimatePresence>
           {videoResult && (
             <motion.div 
@@ -330,33 +305,32 @@ const VideoPage: React.FC = () => {
             >
               {/* Status Header */}
               <motion.div 
-                className={`flex items-center justify-between p-4 border-2 rounded-xl ${getStatusColor(videoResult.status)}`}
+                className={`flex items-center justify-between p-4 border-2 rounded-xl ${
+                  videoResult.success 
+                    ? 'border-emerald-200 bg-emerald-50' 
+                    : 'border-red-200 bg-red-50'
+                }`}
                 initial={{ scale: 0.95 }}
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.2 }}
               >
                 <div className="flex items-center">
-                  {getStatusIcon(videoResult.status)}
-                  <div className="ml-3">
+                  {videoResult.success ? (
+                    <CheckCircle className="w-6 h-6 text-emerald-600 mr-3" />
+                  ) : (
+                    <AlertTriangle className="w-6 h-6 text-red-600 mr-3" />
+                  )}
+                  <div>
                     <span className="font-semibold text-lg">
-                      Video {videoResult.status === 'completed' ? 'Generated Successfully' : 
-                             videoResult.status === 'error' ? 'Generation Failed' : 
-                             'Processing...'}
+                      Video Workflow {videoResult.success ? "Completed Successfully" : "Failed"}
                     </span>
-                    {videoResult.processing_time && (
-                      <p className="text-sm opacity-75 mt-1">
-                        Processing time: {videoResult.processing_time.toFixed(1)}s
-                      </p>
-                    )}
-                    {videoResult.demo_mode && (
-                      <p className="text-sm opacity-75 mt-1 text-purple-600">
-                        🎬 Demo Mode: Using sample video for demonstration
-                      </p>
-                    )}
+                    <p className="text-sm opacity-75 mt-1">
+                      {videoResult.stages_completed?.length || 0} stages processed
+                    </p>
                   </div>
                 </div>
                 
-                {videoResult.status === 'completed' && videoResult.video_url && (
+                {videoResult.success && videoResult.data?.video_url && (
                   <div className="flex items-center gap-2">
                     <motion.button
                       className="p-2 bg-white bg-opacity-50 rounded-lg hover:bg-opacity-75 transition-all"
@@ -378,22 +352,80 @@ const VideoPage: React.FC = () => {
                 )}
               </motion.div>
 
+              {/* Workflow Stages */}
+              {videoResult.stages_completed && videoResult.stages_completed.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-gray-800 text-lg">Workflow Pipeline:</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {videoResult.stages_completed.map((stage, index) => (
+                      <motion.div
+                        key={stage.agent_id}
+                        className={`p-4 border-2 rounded-xl ${getStatusColor(stage.status)}`}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.3 + index * 0.1 }}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center">
+                            {getStatusIcon(stage.status)}
+                            <div className="ml-3">
+                              <span className="font-semibold">{stage.stage_name}</span>
+                              <span className="ml-2 text-sm text-gray-500">({stage.agent_id})</span>
+                            </div>
+                          </div>
+                        </div>
+                        {stage.output_keys && stage.output_keys.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {stage.output_keys.map((key) => (
+                              <span 
+                                key={key}
+                                className="px-2 py-1 bg-white bg-opacity-50 text-xs rounded-full"
+                              >
+                                {key}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Generated Script Display */}
+              {(videoResult.data?.video_script || videoResult.script) && (
+                <motion.div 
+                  className="p-4 border-2 border-blue-200 bg-blue-50 rounded-xl"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <FileVideo className="w-5 h-5 text-blue-600" />
+                    <h4 className="font-semibold text-blue-800">Generated Script</h4>
+                  </div>
+                  <div className="bg-white p-4 rounded-lg">
+                    <pre className="whitespace-pre-wrap text-sm text-gray-700 font-mono">
+                      {videoResult.data?.video_script || videoResult.script}
+                    </pre>
+                  </div>
+                  <div className="mt-3 text-xs text-blue-600">
+                    Script length: {(videoResult.data?.video_script || videoResult.script || '').length} characters
+                  </div>
+                </motion.div>
+              )}
+
               {/* Video Player */}
-              {videoResult.status === 'completed' && videoResult.video_url && (
+              {videoResult.success && videoResult.data?.video_url && (
                 <motion.div 
                   className="p-4 border-2 border-gray-200 bg-gray-50 rounded-xl"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
+                  transition={{ delay: 0.5 }}
                 >
                   <div className="flex items-center gap-3 mb-4">
                     <Video className="w-5 h-5 text-purple-600" />
                     <h4 className="font-semibold text-gray-800">Your AI Generated Video</h4>
-                    {videoResult.demo_mode && (
-                      <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">
-                        Demo
-                      </span>
-                    )}
                   </div>
                   
                   <div className="relative bg-black rounded-lg overflow-hidden">
@@ -402,20 +434,20 @@ const VideoPage: React.FC = () => {
                       className="w-full h-auto max-h-96"
                       poster="/api/placeholder/800/450"
                     >
-                      <source src={videoResult.video_url} type="video/mp4" />
+                      <source src={videoResult.data.video_url} type="video/mp4" />
                       Your browser does not support the video tag.
                     </video>
                   </div>
                   
                   <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
                     <div className="flex items-center gap-4">
-                      <span>Video ID: {videoResult.video_id}</span>
-                      {videoResult.video_metadata?.duration_estimate && (
-                        <span>Duration: ~{Math.floor(videoResult.video_metadata.duration_estimate / 60)}:{(videoResult.video_metadata.duration_estimate % 60).toString().padStart(2, '0')}</span>
+                      <span>Video ID: {videoResult.data.video_id}</span>
+                      {videoResult.data.processing_time && (
+                        <span>Processing: {videoResult.data.processing_time.toFixed(1)}s</span>
                       )}
                     </div>
                     <a
-                      href={videoResult.video_url}
+                      href={videoResult.data.video_url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-purple-600 hover:text-purple-800 font-medium"
@@ -427,7 +459,7 @@ const VideoPage: React.FC = () => {
               )}
 
               {/* Error Details */}
-              {videoResult.status === 'error' && videoResult.error && (
+              {!videoResult.success && videoResult.error && (
                 <motion.div 
                   className="p-4 border-2 border-red-200 bg-red-50 rounded-xl"
                   initial={{ opacity: 0, y: 20 }}
@@ -436,6 +468,9 @@ const VideoPage: React.FC = () => {
                 >
                   <h4 className="font-semibold text-red-800 mb-2">Error Details</h4>
                   <p className="text-sm text-red-600">{videoResult.error}</p>
+                  {videoResult.stage && (
+                    <p className="text-sm text-red-600 mt-1">Failed at stage: {videoResult.stage}</p>
+                  )}
                 </motion.div>
               )}
             </motion.div>
