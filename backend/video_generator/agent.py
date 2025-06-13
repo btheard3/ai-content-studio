@@ -17,9 +17,14 @@ class VideoGeneratorAgent(BaseAgent):
     def __init__(self):
         super().__init__()
         self.name = "AI Video Generator"
-        self.api_key = os.getenv("TAVUS_API_KEY", "dfba9c3298cb4dc384fd436c0c9dcda2")
+        self.api_key = os.getenv("TAVUS_API_KEY")
         self.base_url = "https://tavusapi.com/v2"
         logger.info("🎬 VideoGeneratorAgent initialized")
+        
+        if not self.api_key:
+            logger.error("❌ TAVUS_API_KEY not found in environment variables")
+        else:
+            logger.info("✅ Tavus API key configured")
 
     def get_input_keys(self) -> list:
         return ["creative_draft", "campaign_theme", "final_content"]
@@ -49,6 +54,18 @@ class VideoGeneratorAgent(BaseAgent):
                     "processing_time": 0,
                     "video_metadata": {},
                     "error": "No content provided for video generation",
+                    "agent": self.name
+                })
+
+            if not self.api_key:
+                logger.error("❌ TAVUS_API_KEY not configured")
+                return AgentOutput.from_dict({
+                    "video_url": "",
+                    "video_status": "error",
+                    "video_id": "",
+                    "processing_time": (datetime.now() - start_time).total_seconds(),
+                    "video_metadata": {},
+                    "error": "TAVUS_API_KEY not configured. Please set your Tavus API key in environment variables.",
                     "agent": self.name
                 })
 
@@ -214,29 +231,41 @@ class VideoGeneratorAgent(BaseAgent):
                 else:
                     return {
                         "success": False,
-                        "error": "Video generation timed out or failed"
+                        "error": "Video generation timed out or failed during processing"
                     }
             else:
                 error_detail = self._extract_error_message(response)
                 logger.error(f"❌ Tavus API Error: {error_detail}")
                 
-                # Return demo video for development
-                return self._create_demo_video_response(script, title)
+                return {
+                    "success": False,
+                    "error": f"Tavus API Error ({response.status_code}): {error_detail}"
+                }
                 
         except requests.exceptions.Timeout:
             logger.error("⏰ Tavus API request timed out")
-            return self._create_demo_video_response(script, title)
+            return {
+                "success": False,
+                "error": "Request timeout - Tavus API took too long to respond"
+            }
         except requests.exceptions.ConnectionError:
             logger.error("🔌 Connection error to Tavus API")
-            return self._create_demo_video_response(script, title)
+            return {
+                "success": False,
+                "error": "Connection error - Unable to reach Tavus API"
+            }
         except Exception as e:
             logger.error(f"💥 Unexpected error calling Tavus API: {e}")
-            return self._create_demo_video_response(script, title)
+            return {
+                "success": False,
+                "error": f"Unexpected error: {str(e)}"
+            }
 
     def _poll_video_completion(self, video_id: str, max_wait_time: int = 300) -> Optional[str]:
         """Poll Tavus API for video completion"""
         start_time = time.time()
         poll_interval = 10
+        max_poll_interval = 30
         
         headers = {
             "x-api-key": self.api_key,
@@ -260,19 +289,28 @@ class VideoGeneratorAgent(BaseAgent):
                     logger.info(f"📊 Video status: {status}")
                     
                     if status in ["completed", "ready"]:
-                        video_url = data.get("download_url") or data.get("video_url")
+                        video_url = data.get("download_url") or data.get("video_url") or data.get("hosted_url")
                         if video_url:
                             logger.info(f"✅ Video completed: {video_url}")
                             return video_url
+                        else:
+                            logger.warning("⚠️ Video marked as completed but no URL provided")
                     
                     elif status in ["failed", "error"]:
-                        logger.error(f"❌ Video generation failed: {data.get('error', 'Unknown error')}")
+                        error_msg = data.get("error") or data.get("message") or "Video generation failed"
+                        logger.error(f"❌ Video generation failed: {error_msg}")
                         return None
                     
                     # Still processing
                     logger.info(f"⏳ Video still processing... waiting {poll_interval} seconds")
                     time.sleep(poll_interval)
                     
+                    # Gradually increase poll interval to reduce API calls
+                    poll_interval = min(poll_interval + 5, max_poll_interval)
+                    
+                elif response.status_code == 404:
+                    logger.error(f"❌ Video not found (ID: {video_id})")
+                    return None
                 else:
                     logger.warning(f"⚠️ Status check failed: HTTP {response.status_code}")
                     time.sleep(poll_interval)
@@ -284,25 +322,16 @@ class VideoGeneratorAgent(BaseAgent):
         logger.warning(f"⏰ Video generation timed out after {max_wait_time} seconds")
         return None
 
-    def _create_demo_video_response(self, script: str, title: str) -> Dict[str, Any]:
-        """Create a demo video response when Tavus API is unavailable"""
-        logger.info("🎬 Creating demo video response")
-        
-        # Use a sample video URL for demonstration
-        demo_video_url = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-        
-        return {
-            "success": True,
-            "video_url": demo_video_url,
-            "video_id": f"demo_{int(time.time())}",
-            "demo_mode": True
-        }
-
     def _extract_error_message(self, response) -> str:
         """Extract error message from API response"""
         try:
             error_data = response.json()
-            return error_data.get("message", error_data.get("error", response.text))
+            return (
+                error_data.get("message") or 
+                error_data.get("error") or 
+                error_data.get("detail") or
+                response.text
+            )
         except:
             return f"HTTP {response.status_code}: {response.text}"
 

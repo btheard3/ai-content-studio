@@ -25,7 +25,6 @@ interface VideoCardProps {
     created_at?: string;
     duration_estimate?: number;
   };
-  demo_mode?: boolean;
 }
 
 const VideoCard: React.FC<VideoCardProps> = ({
@@ -33,8 +32,7 @@ const VideoCard: React.FC<VideoCardProps> = ({
   video_status = 'processing',
   video_id,
   processing_time,
-  video_metadata,
-  demo_mode = false
+  video_metadata
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [videoError, setVideoError] = useState(false);
@@ -122,9 +120,7 @@ const VideoCard: React.FC<VideoCardProps> = ({
           </motion.div>
           <div>
             <h3 className="text-xl font-bold text-gray-800">AI Generated Video</h3>
-            <p className="text-sm text-gray-500">
-              {demo_mode ? 'Demo Mode - Tavus AI Video' : 'Powered by Tavus AI'}
-            </p>
+            <p className="text-sm text-gray-500">Powered by Tavus AI</p>
           </div>
         </div>
         
@@ -161,11 +157,6 @@ const VideoCard: React.FC<VideoCardProps> = ({
             {processing_time && (
               <p className="text-sm opacity-75 mt-1">
                 Processing time: {processing_time.toFixed(1)}s
-              </p>
-            )}
-            {demo_mode && (
-              <p className="text-sm opacity-75 mt-1 text-purple-600">
-                🎬 Demo Mode: Using sample video for demonstration
               </p>
             )}
           </div>
@@ -326,7 +317,7 @@ const VideoCard: React.FC<VideoCardProps> = ({
             <div>
               <h4 className="font-semibold text-gray-800 mb-2">Generating Your Video</h4>
               <p className="text-sm text-gray-600">
-                Our AI is creating a personalized video from your content...
+                Tavus AI is creating a personalized video from your content...
               </p>
             </div>
           </div>
@@ -346,7 +337,7 @@ const VideoCard: React.FC<VideoCardProps> = ({
             <div>
               <h4 className="font-semibold text-gray-800 mb-2">Video Generation Failed</h4>
               <p className="text-sm text-gray-600">
-                There was an issue generating your video. Please try again.
+                There was an issue generating your video. Please check your Tavus API configuration and try again.
               </p>
             </div>
           </div>

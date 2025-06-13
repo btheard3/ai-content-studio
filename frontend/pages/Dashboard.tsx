@@ -218,17 +218,16 @@ const Dashboard: React.FC = () => {
 					</h3>
 				</div>
 				<VideoCard
-					video_url="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-					video_status="completed"
-					video_id="demo_tavus_video"
-					processing_time={45.2}
+					video_url=""
+					video_status="processing"
+					video_id="sample_video"
+					processing_time={0}
 					video_metadata={{
-						script_length: 850,
+						script_length: 0,
 						campaign_theme: "AI Content Strategy",
 						created_at: new Date().toISOString(),
-						duration_estimate: 90
+						duration_estimate: 60
 					}}
-					demo_mode={true}
 				/>
 			</motion.div>
 
