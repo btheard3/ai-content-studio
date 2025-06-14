@@ -15,7 +15,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { useApi, apiService } from '../hooks/useApi';
-import VideoCard from '../components/VideoCard';
+import ElaiVideoCard from '../components/ElaiVideoCard';
 
 interface VideoTaskResponse {
   success: boolean;
@@ -117,37 +117,47 @@ const VideoPage: React.FC = () => {
         </div>
         <div>
           <h1 className="text-3xl font-bold text-gray-900">AI Video Generator</h1>
-          <p className="text-gray-600">OpenAI Script Generation + Tavus Video Creation</p>
+          <p className="text-gray-600">OpenAI Script Generation + Elai.io Video Creation</p>
         </div>
       </motion.div>
 
-      {/* Main Video Generation Card */}
+      {/* Direct Elai Video Generator */}
+      <motion.div 
+        className="mb-8"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <ElaiVideoCard />
+      </motion.div>
+
+      {/* Workflow Video Generation Card */}
       <motion.div 
         className="card overflow-hidden mb-8"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
       >
         {/* Card Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <motion.div
-              className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center"
+              className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center"
               whileHover={{ scale: 1.05, rotate: 5 }}
               transition={{ type: "spring", stiffness: 300 }}
             >
               <Sparkles className="w-6 h-6 text-white" />
             </motion.div>
             <div>
-              <h3 className="text-xl font-bold text-gray-800">Create AI Video</h3>
-              <p className="text-sm text-gray-500">Prompt → Script → Video (Full Workflow)</p>
+              <h3 className="text-xl font-bold text-gray-800">Script + Video Workflow</h3>
+              <p className="text-sm text-gray-500">Prompt → OpenAI Script → Elai Video</p>
             </div>
           </div>
           
           <motion.button
             onClick={() => setShowAdvanced(!showAdvanced)}
             className={`p-2 rounded-lg transition-colors ${
-              showAdvanced ? 'bg-purple-100 text-purple-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              showAdvanced ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -166,7 +176,7 @@ const VideoPage: React.FC = () => {
             whileFocus={{ scale: 1.01 }}
           >
             <textarea
-              className="w-full border-2 border-gray-200 rounded-xl p-4 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent transition-all duration-300 resize-none"
+              className="w-full border-2 border-gray-200 rounded-xl p-4 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-300 resize-none"
               rows={4}
               placeholder="Enter your video topic... e.g., 'Create a video about hurricane safety tips for families'"
               value={prompt}
@@ -186,7 +196,7 @@ const VideoPage: React.FC = () => {
           </label>
           <input
             type="text"
-            className="w-full border-2 border-gray-200 rounded-xl p-4 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent transition-all duration-300"
+            className="w-full border-2 border-gray-200 rounded-xl p-4 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-300"
             placeholder="Enter video title (will use prompt if empty)"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -194,56 +204,12 @@ const VideoPage: React.FC = () => {
           />
         </div>
 
-        {/* Advanced Options */}
-        <AnimatePresence>
-          {showAdvanced && (
-            <motion.div
-              className="mb-6 p-4 bg-gray-50 rounded-xl"
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              <h4 className="font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                <Settings className="w-4 h-4" />
-                Advanced Settings
-              </h4>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-2">
-                    Script Style
-                  </label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-                    <option>Professional</option>
-                    <option>Casual</option>
-                    <option>Energetic</option>
-                    <option>Educational</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-2">
-                    Video Length
-                  </label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-                    <option>30 seconds</option>
-                    <option>45 seconds</option>
-                    <option>60 seconds</option>
-                    <option>90 seconds</option>
-                  </select>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         {/* Action Buttons */}
         <div className="flex items-center gap-3 mb-6">
           <motion.button
             onClick={handleGenerateVideo}
             disabled={loading || !prompt.trim()}
-            className="flex items-center px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-lg"
+            className="flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-lg"
             whileHover={{ scale: 1.02, y: -1 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -378,22 +344,48 @@ const VideoPage: React.FC = () => {
                 </motion.div>
               )}
 
-              {/* Video Card Component */}
-              {safeVideoOutput && (
+              {/* Video Player */}
+              {safeVideoOutput?.video_url && (
                 <motion.div
+                  className="p-4 border-2 border-gray-200 bg-gray-50 rounded-xl"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.5 }}
                 >
-                  <VideoCard
-                    video_url={safeVideoOutput.video_url}
-                    video_status={safeVideoOutput.video_status}
-                    video_id={safeVideoOutput.video_id}
-                    processing_time={safeVideoOutput.processing_time}
-                    video_metadata={safeVideoOutput.video_metadata}
-                    error={videoResult.error}
-                    agent="Tavus AI"
-                  />
+                  <div className="flex items-center gap-3 mb-4">
+                    <Video className="w-5 h-5 text-purple-600" />
+                    <h4 className="font-semibold text-gray-800">Generated Video</h4>
+                  </div>
+                  
+                  <div className="relative bg-black rounded-lg overflow-hidden">
+                    <video 
+                      controls 
+                      className="w-full h-auto max-h-96"
+                      poster="/api/placeholder/800/450"
+                    >
+                      <source src={safeVideoOutput.video_url} type="video/mp4" />
+                      Your browser does not support the video tag.
+                    </video>
+                  </div>
+                  
+                  <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium text-gray-600">Video ID:</span>
+                      <p className="text-gray-800">{safeVideoOutput.video_id || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Status:</span>
+                      <p className="text-gray-800">{safeVideoOutput.video_status}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Processing:</span>
+                      <p className="text-gray-800">{safeVideoOutput.processing_time?.toFixed(1)}s</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Provider:</span>
+                      <p className="text-gray-800">Elai.io</p>
+                    </div>
+                  </div>
                 </motion.div>
               )}
 
@@ -422,7 +414,7 @@ const VideoPage: React.FC = () => {
         className="card"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
+        transition={{ delay: 0.4 }}
       >
         <h3 className="text-lg font-semibold text-gray-800 mb-4">How It Works</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -439,7 +431,7 @@ const VideoPage: React.FC = () => {
               <Video className="w-6 h-6 text-purple-600" />
             </div>
             <h4 className="font-medium text-gray-800 mb-2">2. Video Creation</h4>
-            <p className="text-sm text-gray-600">Tavus AI transforms the script into a professional video</p>
+            <p className="text-sm text-gray-600">Elai.io transforms the script into a professional AI video</p>
           </div>
           
           <div className="text-center p-4">

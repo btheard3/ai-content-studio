@@ -82,8 +82,19 @@ export const apiService = {
     return response.data;
   },
 
+  generateElaiVideo: async (data: {
+    text: string;
+    title?: string;
+    template_id?: string;
+    voice_id?: string;
+  }) => {
+    const response = await axios.post('http://localhost:8000/generate_elai_video', data);
+    return response.data;
+  },
+
   generateVideo: async (data: {
     text: string;
+    title?: string;
     template_id?: string;
     voice_id?: string;
   }) => {
@@ -138,6 +149,16 @@ export const apiService = {
       `http://localhost:8000/api/research/analytics?days=${days}`,
       { headers: { Authorization: 'Bearer dummy-token' } }
     );
+    return response.data;
+  },
+
+  getElaiTemplates: async () => {
+    const response = await axios.get('http://localhost:8000/elai/templates');
+    return response.data;
+  },
+
+  getElaiVoices: async () => {
+    const response = await axios.get('http://localhost:8000/elai/voices');
     return response.data;
   },
 

@@ -18,7 +18,7 @@ import CodeGeneratorCard from "../components/CodeGeneratorCard";
 import CreativeWriterCard from "../components/CreativeWriterCard";
 import QualityControlCard from "../components/QualityControlCard";
 import PublishingCard from "../components/PublishingCard";
-import VideoCreatorCard from "../components/VideoCreatorCard";
+import ElaiVideoCard from "../components/ElaiVideoCard";
 import { useAgents } from "../context/AgentContext";
 import { QualityControlOutput, PublishingOutput } from "../types";
 
@@ -172,7 +172,7 @@ const Dashboard: React.FC = () => {
 						AI Content Studio Dashboard
 					</h2>
 					<p className="text-gray-600">
-						Multi-Agent Content Generation Platform
+						Multi-Agent Content Generation Platform with Elai.io Video
 					</p>
 				</div>
 				<motion.div
@@ -235,17 +235,17 @@ const Dashboard: React.FC = () => {
 				<ContentGenerationForm />
 			</motion.div>
 
-			{/* AI Video Generator */}
+			{/* Elai Video Generator */}
 			<motion.div className="mb-8" variants={itemVariants}>
 				<div className="flex items-center gap-3 mb-6">
 					<div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
 						<Video className="w-5 h-5 text-white" />
 					</div>
 					<h3 className="text-xl font-bold text-gray-800">
-						AI Video Generator (Tavus)
+						AI Video Generator (Elai.io)
 					</h3>
 				</div>
-				<VideoCreatorCard />
+				<ElaiVideoCard />
 			</motion.div>
 
 			{/* Code Generator */}

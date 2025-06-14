@@ -41,8 +41,9 @@ class WorkflowRequest(BaseModel):
 class AgentRequest(BaseModel):
     text: str
 
-class VideoRequest(BaseModel):
+class ElaiVideoRequest(BaseModel):
     text: str
+    title: str = "AI Generated Video"
     template_id: str = None
     voice_id: str = None
 
@@ -255,13 +256,13 @@ def run_video_workflow(request: VideoWorkflowRequest):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=error_msg)
 
-@app.post("/generate_video")
-def generate_video(request: VideoRequest):
-    """Generate video using Elai AI with improved error handling"""
+@app.post("/generate_elai_video")
+def generate_elai_video(request: ElaiVideoRequest):
+    """Generate video using Elai.io API with improved error handling"""
     try:
-        print(f"🎬 Starting video generation with text: {request.text[:100]}...")
+        print(f"🎬 Starting Elai video generation with text: {request.text[:100]}...")
         
-        # Import the agent directly to avoid module path issues
+        # Import the Elai agent directly
         import sys
         import os
         sys.path.append(os.path.join(os.path.dirname(__file__)))
@@ -273,16 +274,17 @@ def generate_video(request: VideoRequest):
         agent = ElaiVideoAgent()
         input_data = AgentInput({
             "text": request.text,
+            "title": request.title,
             "template_id": request.template_id,
             "voice_id": request.voice_id
         })
         
         result = agent.run(input_data)
         
-        print(f"📊 Video generation result: {result.data.get('status')}")
+        print(f"📊 Elai video generation result: {result.data.get('status')}")
         
         if result.data.get("status") == "completed":
-            print("✅ Video generation completed successfully")
+            print("✅ Elai video generation completed successfully")
             return {
                 "success": True,
                 "video_url": result.data.get("video_url"),
@@ -295,7 +297,7 @@ def generate_video(request: VideoRequest):
                 "status": "completed"
             }
         elif result.data.get("status") == "error":
-            print(f"❌ Video generation failed: {result.data.get('error')}")
+            print(f"❌ Elai video generation failed: {result.data.get('error')}")
             return {
                 "success": False,
                 "error": result.data.get("error"),
@@ -309,63 +311,32 @@ def generate_video(request: VideoRequest):
             }
             
     except Exception as e:
-        error_msg = f"Video generation error: {str(e)}"
+        error_msg = f"Elai video generation error: {str(e)}"
         print(f"💥 {error_msg}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=error_msg)
 
+@app.post("/generate_video")
+def generate_video(request: ElaiVideoRequest):
+    """Generate video using Elai.io API (alias for generate_elai_video)"""
+    return generate_elai_video(request)
+
 @app.post("/generate_tavus_video")
 def generate_tavus_video(request: TavusVideoRequest):
-    """Generate video using Tavus AI"""
+    """Generate video using Tavus AI (deprecated - redirects to Elai)"""
     try:
-        print(f"🎬 Starting Tavus video generation: {request.title}")
+        print(f"🔄 Redirecting Tavus request to Elai: {request.title}")
         
-        # Import the Tavus video generator agent
-        import sys
-        import os
-        sys.path.append(os.path.join(os.path.dirname(__file__)))
+        # Convert Tavus request to Elai request
+        elai_request = ElaiVideoRequest(
+            text=request.script,
+            title=request.title
+        )
         
-        from video_generator.agent import VideoGeneratorAgent
-        from backend.agent_base import AgentInput
+        return generate_elai_video(elai_request)
         
-        # Create agent instance and run
-        agent = VideoGeneratorAgent()
-        input_data = AgentInput({
-            "creative_draft": request.script,
-            "campaign_theme": request.title,
-            "final_content": request.script
-        })
-        
-        result = agent.run(input_data)
-        
-        print(f"📊 Tavus video generation result: {result.data.get('video_status')}")
-        
-        if result.data.get("video_status") == "completed":
-            print("✅ Tavus video generation completed successfully")
-            return {
-                "success": True,
-                "video_url": result.data.get("video_url"),
-                "video_id": result.data.get("video_id"),
-                "processing_time": result.data.get("processing_time"),
-                "video_metadata": result.data.get("video_metadata"),
-                "status": "completed"
-            }
-        elif result.data.get("video_status") == "error":
-            print(f"❌ Tavus video generation failed: {result.data.get('error')}")
-            return {
-                "success": False,
-                "error": result.data.get("error"),
-                "status": "error"
-            }
-        else:
-            return {
-                "success": False,
-                "error": "Tavus video generation status unknown",
-                "status": result.data.get("video_status", "unknown")
-            }
-            
     except Exception as e:
-        error_msg = f"Tavus video generation error: {str(e)}"
+        error_msg = f"Video generation error: {str(e)}"
         print(f"💥 {error_msg}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=error_msg)
@@ -432,9 +403,9 @@ def generate_code(request: CodeRequest):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=error_msg)
 
-@app.get("/video/templates")
-def get_video_templates():
-    """Get available video templates with improved error handling"""
+@app.get("/elai/templates")
+def get_elai_templates():
+    """Get available Elai video templates"""
     try:
         import sys
         import os
@@ -444,7 +415,7 @@ def get_video_templates():
         agent = ElaiVideoAgent()
         templates = agent.get_video_templates()
         
-        print(f"📋 Retrieved {len(templates)} templates")
+        print(f"📋 Retrieved {len(templates)} Elai templates")
         
         return {
             "success": True,
@@ -452,7 +423,7 @@ def get_video_templates():
             "count": len(templates)
         }
     except Exception as e:
-        print(f"❌ Error getting templates: {e}")
+        print(f"❌ Error getting Elai templates: {e}")
         return {
             "success": False,
             "error": str(e),
@@ -463,9 +434,9 @@ def get_video_templates():
             ]
         }
 
-@app.get("/video/voices")
-def get_video_voices():
-    """Get available video voices with improved error handling"""
+@app.get("/elai/voices")
+def get_elai_voices():
+    """Get available Elai video voices"""
     try:
         import sys
         import os
@@ -475,7 +446,7 @@ def get_video_voices():
         agent = ElaiVideoAgent()
         voices = agent.get_available_voices()
         
-        print(f"🎤 Retrieved {len(voices)} voices")
+        print(f"🎤 Retrieved {len(voices)} Elai voices")
         
         return {
             "success": True,
@@ -483,7 +454,7 @@ def get_video_voices():
             "count": len(voices)
         }
     except Exception as e:
-        print(f"❌ Error getting voices: {e}")
+        print(f"❌ Error getting Elai voices: {e}")
         return {
             "success": False,
             "error": str(e),
@@ -494,6 +465,16 @@ def get_video_voices():
                 {"id": "es-ES-1", "name": "Maria", "language": "Spanish", "gender": "Female"}
             ]
         }
+
+@app.get("/video/templates")
+def get_video_templates():
+    """Get available video templates (alias for Elai templates)"""
+    return get_elai_templates()
+
+@app.get("/video/voices")
+def get_video_voices():
+    """Get available video voices (alias for Elai voices)"""
+    return get_elai_voices()
 
 @app.get("/code/templates")
 def get_code_templates():
@@ -646,6 +627,36 @@ def list_agents():
         print(f"❌ Error listing agents: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/test/elai")
+def test_elai_endpoint():
+    """Test endpoint to verify Elai video generation functionality"""
+    try:
+        import sys
+        import os
+        sys.path.append(os.path.join(os.path.dirname(__file__)))
+        
+        from elai_video.agent import ElaiVideoAgent
+        
+        agent = ElaiVideoAgent()
+        
+        # Test API key availability
+        api_key_status = "configured" if agent.api_key else "missing"
+        
+        return {
+            "success": True,
+            "message": "Elai video generation system test completed",
+            "api_key_status": api_key_status,
+            "agent_name": agent.name,
+            "base_url": agent.base_url
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "message": "Elai video generation system test failed"
+        }
+
 @app.get("/test/research")
 def test_research_endpoint():
     """Test endpoint to verify research functionality"""
@@ -678,72 +689,6 @@ def test_research_endpoint():
             "message": "Research system test failed"
         }
 
-@app.get("/test/tavus")
-def test_tavus_endpoint():
-    """Test endpoint to verify Tavus video generation functionality"""
-    try:
-        import sys
-        import os
-        sys.path.append(os.path.join(os.path.dirname(__file__)))
-        
-        from video_generator.agent import VideoGeneratorAgent
-        
-        agent = VideoGeneratorAgent()
-        
-        # Test API key availability
-        api_key_status = "configured" if agent.api_key else "missing"
-        
-        return {
-            "success": True,
-            "message": "Tavus video generation system test completed",
-            "api_key_status": api_key_status,
-            "agent_name": agent.name,
-            "base_url": agent.base_url
-        }
-        
-    except Exception as e:
-        return {
-            "success": False,
-            "error": str(e),
-            "message": "Tavus video generation system test failed"
-        }
-
-@app.get("/test/video")
-def test_video_endpoint():
-    """Test endpoint to verify video generation functionality"""
-    try:
-        import sys
-        import os
-        sys.path.append(os.path.join(os.path.dirname(__file__)))
-        
-        from elai_video.agent import ElaiVideoAgent
-        
-        agent = ElaiVideoAgent()
-        
-        # Test API key availability
-        api_key_status = "configured" if agent.api_key else "missing"
-        
-        # Test template fetching
-        templates = agent.get_video_templates()
-        voices = agent.get_available_voices()
-        
-        return {
-            "success": True,
-            "message": "Video system test completed",
-            "api_key_status": api_key_status,
-            "templates_available": len(templates),
-            "voices_available": len(voices),
-            "sample_templates": templates[:3] if templates else [],
-            "sample_voices": voices[:3] if voices else []
-        }
-        
-    except Exception as e:
-        return {
-            "success": False,
-            "error": str(e),
-            "message": "Video system test failed"
-        }
-
 @app.get("/test/code")
 def test_code_endpoint():
     """Test endpoint to verify code generation functionality"""
@@ -773,16 +718,18 @@ def test_code_endpoint():
 @app.get("/")
 def read_root():
     return {
-        "message": "AI Content Studio + Research Agent + Tavus Video Generation backend is live!",
+        "message": "AI Content Studio + Research Agent + Elai Video Generation backend is live!",
         "version": "1.0.0",
         "endpoints": {
             "workflow": "/run_workflow",
             "video_workflow": "/run_video_workflow",
             "task": "/run_task",
             "single_agent": "/run/{agent_id}",
+            "elai_video_generation": "/generate_elai_video",
             "video_generation": "/generate_video",
-            "tavus_video_generation": "/generate_tavus_video",
             "code_generation": "/generate_code",
+            "elai_templates": "/elai/templates",
+            "elai_voices": "/elai/voices",
             "video_templates": "/video/templates",
             "video_voices": "/video/voices",
             "code_templates": "/code/templates",
@@ -791,9 +738,8 @@ def read_root():
             "workflow_info": "/workflow/info",
             "agents": "/agents",
             "research": "/api/research/*",
+            "test_elai": "/test/elai",
             "test_research": "/test/research",
-            "test_video": "/test/video",
-            "test_tavus": "/test/tavus",
             "test_code": "/test/code"
         }
     }

@@ -1,0 +1,6 @@
+id: elai_video_agent
+name: Elai Video Generator
+entry_point: backend.elai_video.agent:ElaiVideoAgent
+description: Generates AI videos using Elai.io API
+input_keys: ["text", "template_id", "voice_id", "title"]
+output_keys: ["video_url", "video_id", "status", "processing_time", "template_used", "voice_used", "demo_mode", "message"]

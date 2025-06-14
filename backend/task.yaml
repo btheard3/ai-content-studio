@@ -39,8 +39,8 @@ agents:
 
   elai_video_agent:
     spec_path: "backend/elai_video/agent.py"
-    input_keys: ["text"]
-    output_keys: ["video_url", "status", "video_id", "processing_time"]
+    input_keys: ["text", "title", "template_id", "voice_id"]
+    output_keys: ["video_url", "status", "video_id", "processing_time", "template_used", "voice_used", "demo_mode", "message"]
 
   code_generator_agent:
     spec_path: "backend/code_generator/agent.py"
@@ -75,9 +75,9 @@ video_workflow:
       name: "Script Generation"
       description: "Generate video script using OpenAI GPT-4"
       
-    - agent: video_generator
+    - agent: elai_video_agent
       name: "Video Generation"
-      description: "Generate video from script using Tavus AI"
+      description: "Generate video from script using Elai.io API"
 
 code_workflow:
   stages:
