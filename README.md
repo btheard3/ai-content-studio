@@ -1,44 +1,49 @@
-# AI Content Studio - Research & Data Agent
+# AI Content Studio - Multi-Agent Content Generation Platform
 
-A comprehensive research and data agent with both frontend and backend components for intelligent content research and analysis.
+A comprehensive AI-powered content generation platform with research capabilities, code generation, and video creation using Elai.io.
 
 ## Features
 
+### Core Components
+- **Multi-Agent Workflow System** - Coordinated AI agents for content creation
+- **Research & Data Agent** - Real-time research across academic, web, and statistical sources
+- **Code Generator** - AI-powered code generation in multiple programming languages
+- **Video Generation** - Professional AI video creation using Elai.io API
+- **Content Pipeline** - End-to-end content creation from strategy to publishing
+
 ### Frontend Components
-- **Clean, intuitive user interface** with search input field and advanced filters
+- **React 18** with TypeScript for type safety
+- **Framer Motion** for smooth animations and transitions
+- **Tailwind CSS** for responsive styling
 - **Real-time search suggestions** with debounced API calls
-- **Advanced filtering system** for data sources, date ranges, and relevance scores
-- **Organized, paginated results display** with detailed result cards
-- **Data visualization components** for research analytics and trends
-- **Loading states and error handling** with smooth animations
+- **Advanced filtering system** for data sources and content types
 - **Responsive design** optimized for all device sizes
 
 ### Backend Components
-- **RESTful API endpoints** for data retrieval and processing
-- **Robust error handling** and input validation with Pydantic models
-- **SQLite database** for storing research results and caching
-- **Rate limiting and caching mechanisms** to optimize performance
-- **Multiple data source integration** (academic, web, statistical)
-- **Authentication and authorization** with JWT token support
-- **Comprehensive logging and monitoring**
+- **FastAPI** for high-performance API development
+- **Agent-based architecture** for modular AI workflows
+- **SQLite database** for research caching and data storage
+- **OpenAI API** integration for intelligent content generation
+- **Elai.io API** integration for professional video creation
+- **Async/await** for concurrent request handling
 
 ## Technical Stack
 
 ### Frontend
-- **React 18** with TypeScript for type safety
-- **Framer Motion** for smooth animations and transitions
-- **Tailwind CSS** for responsive styling
+- **React 18** with TypeScript
+- **Framer Motion** for animations
+- **Tailwind CSS** for styling
 - **Axios** for API communication
 - **Recharts** for data visualization
-- **Lucide React** for consistent iconography
+- **Lucide React** for icons
 
 ### Backend
-- **FastAPI** for high-performance API development
-- **SQLite** for local data storage and caching
-- **OpenAI API** for intelligent content analysis
-- **Async/await** for concurrent request handling
-- **Pydantic** for data validation and serialization
-- **CORS middleware** for cross-origin requests
+- **FastAPI** with Python 3.9+
+- **OpenAI API** for content generation
+- **Elai.io API** for video creation
+- **SQLite** for data storage
+- **Async/await** for performance
+- **Pydantic** for data validation
 
 ## Installation & Setup
 
@@ -53,6 +58,7 @@ pip install -r requirements.txt
 ```bash
 # Create .env file
 OPENAI_API_KEY=your_openai_api_key_here
+ELAI_API_KEY=your_elai_api_key_here
 ```
 
 3. Start the backend server:
@@ -66,6 +72,7 @@ The backend will be available at `http://localhost:8000`
 
 1. Install Node.js dependencies:
 ```bash
+cd frontend
 npm install
 ```
 
@@ -78,105 +85,90 @@ The frontend will be available at `http://localhost:5173`
 
 ## API Documentation
 
-### Research Endpoints
-
-- `POST /api/research/search` - Perform comprehensive research search
-- `GET /api/research/results/{query_id}` - Get paginated results for a query
-- `GET /api/research/suggestions` - Get search suggestions
-- `GET /api/research/sources` - Get available data sources
-- `GET /api/research/history` - Get search history
-- `GET /api/research/analytics` - Get usage analytics
-
-### Content Workflow Endpoints
+### Core Endpoints
 
 - `POST /run_workflow` - Execute multi-agent content workflow
-- `POST /run/{agent_id}` - Run individual agent
-- `GET /workflow/info` - Get workflow information
-- `GET /agents` - List all available agents
+- `POST /run_video_workflow` - Execute script generation + video creation
+- `POST /generate_elai_video` - Direct Elai.io video generation
+- `POST /generate_code` - AI code generation
+- `GET /elai/templates` - Get available video templates
+- `GET /elai/voices` - Get available video voices
+
+### Research Endpoints
+
+- `POST /api/research/search` - Comprehensive research search
+- `GET /api/research/analytics` - Usage analytics
+- `GET /api/research/sources` - Available data sources
 
 ## Usage Examples
 
-### Basic Research Search
+### Video Generation
 
 ```typescript
-const searchResults = await axios.post('/api/research/search', {
+const videoResult = await apiService.generateElaiVideo({
+  text: "Welcome to our AI platform that transforms business operations",
+  title: "AI Platform Demo",
+  template_id: "professional",
+  voice_id: "en-US-1"
+});
+```
+
+### Code Generation
+
+```typescript
+const codeResult = await apiService.generateCode({
+  description: "REST API for task management with authentication",
+  language: "python",
+  framework: "fastapi",
+  complexity: "medium",
+  include_tests: true
+});
+```
+
+### Research Search
+
+```typescript
+const searchResults = await apiService.searchResearch({
   query: 'AI applications in healthcare',
   filters: {
     sources: ['academic', 'web'],
-    min_relevance: 0.7,
-    date_from: '2023-01-01',
-    date_to: '2024-12-31'
+    min_relevance: 0.7
   }
 });
 ```
 
-### Advanced Filtering
-
-```typescript
-const filters = {
-  sources: ['academic', 'statistics'],
-  data_types: ['academic', 'meta-analysis'],
-  min_relevance: 0.8,
-  date_from: '2024-01-01'
-};
-```
-
 ## Architecture
 
-### Database Schema
-
-- **research_queries** - Store user search queries
-- **research_results** - Store search results with metadata
-- **data_sources** - Configure available data sources
-- **research_cache** - Cache frequently accessed data
+### Agent System
+- **Content Strategist** - Plans content strategy and themes
+- **Research Agent** - Gathers data from multiple sources
+- **Creative Writer** - Generates engaging content
+- **Quality Control** - Reviews and improves content
+- **Publishing Agent** - Formats and distributes content
+- **Script Generator** - Creates video scripts
+- **Elai Video Agent** - Generates professional videos
+- **Code Generator** - Creates clean, documented code
 
 ### Security Features
-
 - **JWT Authentication** for API access
 - **Rate limiting** to prevent abuse
 - **Input validation** with Pydantic models
 - **CORS configuration** for secure cross-origin requests
-- **SQL injection protection** with parameterized queries
 
 ### Performance Optimizations
-
 - **Async/await** for concurrent processing
 - **Database caching** with expiration
 - **Debounced search suggestions**
 - **Paginated results** for large datasets
-- **Connection pooling** for database access
-
-## Testing
-
-Run the test suite:
-
-```bash
-# Backend tests
-python backend/test_research.py
-
-# Frontend tests (if implemented)
-npm test
-```
 
 ## Deployment
-
-### Docker Deployment
-
-```dockerfile
-# Backend Dockerfile
-FROM python:3.9-slim
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-COPY . .
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
-```
 
 ### Environment Variables
 
 ```bash
 # Production environment
-OPENAI_API_KEY=your_production_key
+OPENAI_API_KEY=your_production_openai_key
+ELAI_API_KEY=your_production_elai_key
 DATABASE_URL=your_database_url
 JWT_SECRET_KEY=your_jwt_secret
 CORS_ORIGINS=https://yourdomain.com

@@ -102,14 +102,6 @@ export const apiService = {
     return response.data;
   },
 
-  generateTavusVideo: async (data: {
-    script: string;
-    title: string;
-  }) => {
-    const response = await axios.post('http://localhost:8000/generate_tavus_video', data);
-    return response.data;
-  },
-
   generateCode: async (data: {
     description: string;
     language: string;

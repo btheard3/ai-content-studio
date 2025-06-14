@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="AI Content Studio API", version="1.0.0")
 
-# ✅ Enable CORS so frontend (localhost:5173) can make requests
+# Enable CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://localhost:3000"],
@@ -31,7 +31,7 @@ app.add_middleware(
 # Include research API routes
 app.include_router(research_router)
 
-# ✅ Load AgentExecutor with correct task file
+# Load AgentExecutor with correct task file
 executor = AgentExecutor("backend/task.yaml")
 
 class WorkflowRequest(BaseModel):
@@ -54,16 +54,12 @@ class CodeRequest(BaseModel):
     complexity: str = "medium"
     include_tests: bool = True
 
-class TavusVideoRequest(BaseModel):
-    script: str
-    title: str = "AI Generated Video"
+class TaskRequest(BaseModel):
+    inputs: dict
 
 class VideoWorkflowRequest(BaseModel):
     user_prompt: str
     title: str = "AI Generated Video"
-
-class TaskRequest(BaseModel):
-    inputs: dict
 
 @app.post("/run_workflow")
 def run_workflow(request: WorkflowRequest):
@@ -75,11 +71,9 @@ def run_workflow(request: WorkflowRequest):
         if result.success:
             print("✅ Workflow completed successfully")
             
-            # Log research data if available
             if 'research_summary' in result.context:
                 print(f"📊 Research completed: {len(result.context.get('research_data', {}).get('results', []))} sources found")
             
-            # Log video generation if available
             if 'video_url' in result.context:
                 print(f"🎬 Video generated: {result.context.get('video_url')}")
             
@@ -106,7 +100,7 @@ def run_workflow(request: WorkflowRequest):
 
 @app.post("/run_task")
 def run_task(request: TaskRequest):
-    """Execute the video generation task: script_generator → video_generator"""
+    """Execute the video generation task: script_generator → elai_video_agent"""
     try:
         print(f"🎬 Starting video task with inputs: {request.inputs}")
         
@@ -129,21 +123,18 @@ def run_task(request: TaskRequest):
         video_script = script_result.data.get("video_script")
         print(f"✅ Script generated: {len(video_script)} characters")
         
-        # Step 2: Generate video
-        from backend.video_generator.agent import VideoGeneratorAgent
+        # Step 2: Generate video with Elai
+        from backend.elai_video.agent import ElaiVideoAgent
         
-        video_agent = VideoGeneratorAgent()
+        video_agent = ElaiVideoAgent()
         video_input = AgentInput({
-            "video_script": video_script,
-            "title": request.inputs.get("title", "AI Generated Video"),
-            "creative_draft": video_script,
-            "campaign_theme": request.inputs.get("title", "AI Generated Video"),
-            "final_content": video_script
+            "text": video_script,
+            "title": request.inputs.get("title", "AI Generated Video")
         })
         
         video_result = video_agent.run(video_input)
         
-        if video_result.data.get("video_status") == "error":
+        if video_result.data.get("status") == "error":
             return {
                 "success": False,
                 "error": f"Video generation failed: {video_result.data.get('error')}",
@@ -159,7 +150,7 @@ def run_task(request: TaskRequest):
                 "video_script": video_script,
                 "video_url": video_result.data.get("video_url"),
                 "video_id": video_result.data.get("video_id"),
-                "video_status": video_result.data.get("video_status"),
+                "video_status": video_result.data.get("status"),
                 "processing_time": video_result.data.get("processing_time"),
                 "video_metadata": video_result.data.get("video_metadata")
             }
@@ -173,7 +164,7 @@ def run_task(request: TaskRequest):
 
 @app.post("/run_video_workflow")
 def run_video_workflow(request: VideoWorkflowRequest):
-    """Execute the video generation workflow: script_generator → video_generator"""
+    """Execute the video generation workflow: script_generator → elai_video_agent"""
     try:
         print(f"🎬 Starting video workflow with prompt: {request.user_prompt[:100]}...")
         
@@ -184,7 +175,7 @@ def run_video_workflow(request: VideoWorkflowRequest):
         script_agent = ScriptGeneratorAgent()
         script_input = AgentInput({
             "user_prompt": request.user_prompt,
-            "text": request.user_prompt  # Fallback for ADK compatibility
+            "text": request.user_prompt
         })
         
         script_result = script_agent.run(script_input)
@@ -199,21 +190,18 @@ def run_video_workflow(request: VideoWorkflowRequest):
         video_script = script_result.data.get("video_script")
         print(f"✅ Script generated: {len(video_script)} characters")
         
-        # Step 2: Generate video
-        from backend.video_generator.agent import VideoGeneratorAgent
+        # Step 2: Generate video with Elai
+        from backend.elai_video.agent import ElaiVideoAgent
         
-        video_agent = VideoGeneratorAgent()
+        video_agent = ElaiVideoAgent()
         video_input = AgentInput({
-            "video_script": video_script,
-            "title": request.title,
-            "creative_draft": video_script,
-            "campaign_theme": request.title,
-            "final_content": video_script
+            "text": video_script,
+            "title": request.title
         })
         
         video_result = video_agent.run(video_input)
         
-        if video_result.data.get("video_status") == "error":
+        if video_result.data.get("status") == "error":
             return {
                 "success": False,
                 "error": f"Video generation failed: {video_result.data.get('error')}",
@@ -229,7 +217,7 @@ def run_video_workflow(request: VideoWorkflowRequest):
                 "video_script": video_script,
                 "video_url": video_result.data.get("video_url"),
                 "video_id": video_result.data.get("video_id"),
-                "video_status": video_result.data.get("video_status"),
+                "video_status": video_result.data.get("status"),
                 "processing_time": video_result.data.get("processing_time"),
                 "video_metadata": video_result.data.get("video_metadata"),
                 "title": request.title
@@ -242,9 +230,9 @@ def run_video_workflow(request: VideoWorkflowRequest):
                     "output_keys": ["video_script"]
                 },
                 {
-                    "agent_id": "video_generator", 
+                    "agent_id": "elai_video_agent", 
                     "stage_name": "Video Generation",
-                    "status": video_result.data.get("video_status", "completed"),
+                    "status": video_result.data.get("status", "completed"),
                     "output_keys": ["video_url", "video_id", "video_metadata"]
                 }
             ]
@@ -258,19 +246,13 @@ def run_video_workflow(request: VideoWorkflowRequest):
 
 @app.post("/generate_elai_video")
 def generate_elai_video(request: ElaiVideoRequest):
-    """Generate video using Elai.io API with improved error handling"""
+    """Generate video using Elai.io API"""
     try:
         print(f"🎬 Starting Elai video generation with text: {request.text[:100]}...")
         
-        # Import the Elai agent directly
-        import sys
-        import os
-        sys.path.append(os.path.join(os.path.dirname(__file__)))
-        
-        from elai_video.agent import ElaiVideoAgent
+        from backend.elai_video.agent import ElaiVideoAgent
         from backend.agent_base import AgentInput
         
-        # Create agent instance and run
         agent = ElaiVideoAgent()
         input_data = AgentInput({
             "text": request.text,
@@ -321,41 +303,15 @@ def generate_video(request: ElaiVideoRequest):
     """Generate video using Elai.io API (alias for generate_elai_video)"""
     return generate_elai_video(request)
 
-@app.post("/generate_tavus_video")
-def generate_tavus_video(request: TavusVideoRequest):
-    """Generate video using Tavus AI (deprecated - redirects to Elai)"""
-    try:
-        print(f"🔄 Redirecting Tavus request to Elai: {request.title}")
-        
-        # Convert Tavus request to Elai request
-        elai_request = ElaiVideoRequest(
-            text=request.script,
-            title=request.title
-        )
-        
-        return generate_elai_video(elai_request)
-        
-    except Exception as e:
-        error_msg = f"Video generation error: {str(e)}"
-        print(f"💥 {error_msg}")
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=error_msg)
-
 @app.post("/generate_code")
 def generate_code(request: CodeRequest):
     """Generate code using AI Code Generator"""
     try:
         print(f"💻 Starting code generation: {request.description[:100]}...")
         
-        # Import the code generator agent
-        import sys
-        import os
-        sys.path.append(os.path.join(os.path.dirname(__file__)))
-        
-        from code_generator.agent import CodeGeneratorAgent
+        from backend.code_generator.agent import CodeGeneratorAgent
         from backend.agent_base import AgentInput
         
-        # Create agent instance and run
         agent = CodeGeneratorAgent()
         input_data = AgentInput({
             "description": request.description,
@@ -407,11 +363,7 @@ def generate_code(request: CodeRequest):
 def get_elai_templates():
     """Get available Elai video templates"""
     try:
-        import sys
-        import os
-        sys.path.append(os.path.join(os.path.dirname(__file__)))
-        
-        from elai_video.agent import ElaiVideoAgent
+        from backend.elai_video.agent import ElaiVideoAgent
         agent = ElaiVideoAgent()
         templates = agent.get_video_templates()
         
@@ -438,11 +390,7 @@ def get_elai_templates():
 def get_elai_voices():
     """Get available Elai video voices"""
     try:
-        import sys
-        import os
-        sys.path.append(os.path.join(os.path.dirname(__file__)))
-        
-        from elai_video.agent import ElaiVideoAgent
+        from backend.elai_video.agent import ElaiVideoAgent
         agent = ElaiVideoAgent()
         voices = agent.get_available_voices()
         
@@ -532,7 +480,6 @@ def get_code_templates():
 def get_code_history():
     """Get code generation history"""
     try:
-        # Mock history data - in a real app, this would come from a database
         history = [
             {
                 "id": "1",
@@ -565,32 +512,9 @@ def get_code_history():
             "history": []
         }
 
-@app.post("/video/clear_cache")
-def clear_video_cache():
-    """Clear video templates and voices cache"""
-    try:
-        import sys
-        import os
-        sys.path.append(os.path.join(os.path.dirname(__file__)))
-        
-        from elai_video.agent import ElaiVideoAgent
-        agent = ElaiVideoAgent()
-        agent.clear_cache()
-        
-        return {
-            "success": True,
-            "message": "Video cache cleared successfully"
-        }
-    except Exception as e:
-        print(f"❌ Error clearing cache: {e}")
-        return {
-            "success": False,
-            "error": str(e)
-        }
-
 @app.post("/run/{agent_id}")
 def run_agent(agent_id: str, request: AgentRequest):
-    """Run a single agent (legacy endpoint for backward compatibility)"""
+    """Run a single agent"""
     try:
         from backend.agent_base import AgentInput
         input_data = AgentInput.from_text(request.text)
@@ -631,11 +555,7 @@ def list_agents():
 def test_elai_endpoint():
     """Test endpoint to verify Elai video generation functionality"""
     try:
-        import sys
-        import os
-        sys.path.append(os.path.join(os.path.dirname(__file__)))
-        
-        from elai_video.agent import ElaiVideoAgent
+        from backend.elai_video.agent import ElaiVideoAgent
         
         agent = ElaiVideoAgent()
         
@@ -679,7 +599,7 @@ def test_research_endpoint():
             "message": "Research system is working",
             "total_results": results.get('total_results', 0),
             "sources": results.get('sources_searched', []),
-            "sample_results": results.get('results', [])[:2]  # First 2 results
+            "sample_results": results.get('results', [])[:2]
         }
         
     except Exception as e:
@@ -693,11 +613,7 @@ def test_research_endpoint():
 def test_code_endpoint():
     """Test endpoint to verify code generation functionality"""
     try:
-        import sys
-        import os
-        sys.path.append(os.path.join(os.path.dirname(__file__)))
-        
-        from code_generator.agent import CodeGeneratorAgent
+        from backend.code_generator.agent import CodeGeneratorAgent
         
         agent = CodeGeneratorAgent()
         
@@ -734,7 +650,6 @@ def read_root():
             "video_voices": "/video/voices",
             "code_templates": "/code/templates",
             "code_history": "/code/history",
-            "video_cache_clear": "/video/clear_cache",
             "workflow_info": "/workflow/info",
             "agents": "/agents",
             "research": "/api/research/*",
