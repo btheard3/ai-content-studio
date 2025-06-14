@@ -89,16 +89,16 @@ class ElaiVideoAgent(BaseAgent):
                 "Content-Type": "application/json"
             }
             
+            # Updated payload to match Elai.io API requirements
             payload = {
-                "title": title,
-                "script": script
+                "name": title,  # Changed from "title" to "name"
+                "script": script,
+                "template": template_id or "default"  # Use template instead of template_id
             }
             
-            # Add optional parameters if provided
-            if template_id:
-                payload["template_id"] = template_id
+            # Add voice if provided
             if voice_id:
-                payload["voice_id"] = voice_id
+                payload["voice"] = voice_id
             
             logger.info(f"📡 Sending request to Elai API: {self.base_url}/v1/videos")
             logger.info(f"📦 Payload: {payload}")
@@ -111,8 +111,14 @@ class ElaiVideoAgent(BaseAgent):
             )
             
             logger.info(f"📊 Response status: {response.status_code}")
+            logger.info(f"📊 Response content: {response.text}")
             
             if response.status_code == 201:
+                data = response.json()
+                logger.info(f"✅ Video creation successful: {data}")
+                return data
+            elif response.status_code == 200:
+                # Some APIs return 200 instead of 201
                 data = response.json()
                 logger.info(f"✅ Video creation successful: {data}")
                 return data
@@ -156,7 +162,7 @@ class ElaiVideoAgent(BaseAgent):
                     logger.info(f"📊 Video status: {status}")
                     
                     if status == "completed":
-                        video_url = data.get("video_url") or data.get("url")
+                        video_url = data.get("video_url") or data.get("url") or data.get("download_url")
                         if video_url:
                             logger.info(f"🎉 Video ready: {video_url}")
                             return video_url
@@ -165,7 +171,7 @@ class ElaiVideoAgent(BaseAgent):
                     elif status in ["failed", "error"]:
                         logger.error(f"❌ Video generation failed with status: {status}")
                         return None
-                    elif status in ["processing", "pending", "queued"]:
+                    elif status in ["processing", "pending", "queued", "in_progress"]:
                         logger.info(f"⏳ Video still processing... waiting {delay} seconds")
                         time.sleep(delay)
                     else:
