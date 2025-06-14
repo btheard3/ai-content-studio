@@ -34,7 +34,7 @@ const VideoCreatorCard: React.FC = () => {
 		error,
 		execute: generateVideo,
 		reset,
-	} = useApi<VideoResponse>(apiService.generateTavusVideo);
+	} = useApi<VideoResponse>(apiService.generateElaiVideo);
 
 	const handleGenerateVideo = async () => {
 		if (!text.trim()) return;
