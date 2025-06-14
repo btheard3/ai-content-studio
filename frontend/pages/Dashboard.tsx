@@ -10,7 +10,7 @@ import {
 	BookOpen,
 	UploadCloud,
 	Code,
-	Video
+	Video,
 } from "lucide-react";
 import ContentGenerationForm from "../components/ContentCard";
 import ResearchDataCard from "../components/ResearchDataCard";
@@ -18,37 +18,41 @@ import CodeGeneratorCard from "../components/CodeGeneratorCard";
 import CreativeWriterCard from "../components/CreativeWriterCard";
 import QualityControlCard from "../components/QualityControlCard";
 import PublishingCard from "../components/PublishingCard";
-import VideoCard from "../components/VideoCard";
+import VideoCreatorCard from "../components/VideoCreatorCard";
 import { useAgents } from "../context/AgentContext";
 import { QualityControlOutput, PublishingOutput } from "../types";
 
 // Type guard functions
 function isQualityControlOutput(obj: any): obj is QualityControlOutput {
-	return obj && 
-		typeof obj === 'object' && 
-		typeof obj.quality_score === 'number' &&
-		typeof obj.final_content === 'string' &&
-		Array.isArray(obj.improvements_made);
+	return (
+		obj &&
+		typeof obj === "object" &&
+		typeof obj.quality_score === "number" &&
+		typeof obj.final_content === "string" &&
+		Array.isArray(obj.improvements_made)
+	);
 }
 
 function isPublishingOutput(obj: any): obj is PublishingOutput {
-	return obj && 
-		typeof obj === 'object' && 
-		typeof obj.published_status === 'string' &&
+	return (
+		obj &&
+		typeof obj === "object" &&
+		typeof obj.published_status === "string" &&
 		Array.isArray(obj.distribution_channels) &&
 		obj.publication_metadata &&
-		typeof obj.publication_metadata === 'object';
+		typeof obj.publication_metadata === "object"
+	);
 }
 
 // Safe JSON parser for agent outputs
 function safeParseAgentOutput(output: any, fallback: any = {}) {
 	if (!output) return fallback;
-	
+
 	// If it's already an object, return it
-	if (typeof output === 'object') return output;
-	
+	if (typeof output === "object") return output;
+
 	// If it's a string, try to parse it
-	if (typeof output === 'string') {
+	if (typeof output === "string") {
 		try {
 			return JSON.parse(output);
 		} catch (e) {
@@ -56,7 +60,7 @@ function safeParseAgentOutput(output: any, fallback: any = {}) {
 			return { error: "Invalid output format", raw_output: output };
 		}
 	}
-	
+
 	return fallback;
 }
 
@@ -97,7 +101,7 @@ const Dashboard: React.FC = () => {
 			processing_time: 0,
 			video_metadata: {},
 			error: "",
-			agent: videoAgent.name
+			agent: videoAgent.name,
 		});
 	}
 
@@ -241,15 +245,7 @@ const Dashboard: React.FC = () => {
 						AI Video Generator (Tavus)
 					</h3>
 				</div>
-				<VideoCard
-					video_url={videoOutput?.video_url || ""}
-					video_status={videoOutput?.video_status || "idle"}
-					video_id={videoOutput?.video_id || ""}
-					processing_time={videoOutput?.processing_time || 0}
-					video_metadata={videoOutput?.video_metadata || {}}
-					error={videoOutput?.error || ""}
-					agent={videoOutput?.agent || "Tavus AI"}
-				/>
+				<VideoCreatorCard />
 			</motion.div>
 
 			{/* Code Generator */}
@@ -258,9 +254,7 @@ const Dashboard: React.FC = () => {
 					<div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
 						<Code className="w-5 h-5 text-white" />
 					</div>
-					<h3 className="text-xl font-bold text-gray-800">
-						AI Code Generator
-					</h3>
+					<h3 className="text-xl font-bold text-gray-800">AI Code Generator</h3>
 				</div>
 				<CodeGeneratorCard />
 			</motion.div>
