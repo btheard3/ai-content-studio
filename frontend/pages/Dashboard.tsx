@@ -10,7 +10,6 @@ import {
 	BookOpen,
 	UploadCloud,
 	Code,
-	Video,
 } from "lucide-react";
 import ContentGenerationForm from "../components/ContentCard";
 import ResearchDataCard from "../components/ResearchDataCard";
@@ -18,7 +17,6 @@ import CodeGeneratorCard from "../components/CodeGeneratorCard";
 import CreativeWriterCard from "../components/CreativeWriterCard";
 import QualityControlCard from "../components/QualityControlCard";
 import PublishingCard from "../components/PublishingCard";
-import ElaiVideoCard from "../components/ElaiVideoCard";
 import { useAgents } from "../context/AgentContext";
 import { QualityControlOutput, PublishingOutput } from "../types";
 
@@ -70,11 +68,9 @@ const Dashboard: React.FC = () => {
 	// Extract outputs and parse JSON safely with proper typing
 	let qualityControlOutput: QualityControlOutput | null = null;
 	let publishingOutput: PublishingOutput | null = null;
-	let videoOutput: any = null;
 
 	const qualityAgent = agents.find((a) => a.id === "quality_control");
 	const publishingAgent = agents.find((a) => a.id === "publishing_agent");
-	const videoAgent = agents.find((a) => a.id === "video_generator");
 
 	// Handle quality control output
 	if (qualityAgent?.output) {
@@ -90,19 +86,6 @@ const Dashboard: React.FC = () => {
 		if (isPublishingOutput(parsed)) {
 			publishingOutput = parsed;
 		}
-	}
-
-	// Handle video output
-	if (videoAgent?.output) {
-		videoOutput = safeParseAgentOutput(videoAgent.output, {
-			video_status: "idle",
-			video_url: "",
-			video_id: "",
-			processing_time: 0,
-			video_metadata: {},
-			error: "",
-			agent: videoAgent.name,
-		});
 	}
 
 	const kpiCards = [
@@ -172,7 +155,7 @@ const Dashboard: React.FC = () => {
 						AI Content Studio Dashboard
 					</h2>
 					<p className="text-gray-600">
-						Multi-Agent Content Generation Platform with Elai.io Video
+						Multi-Agent Content Generation Platform with Research & Code Generation
 					</p>
 				</div>
 				<motion.div
@@ -233,19 +216,6 @@ const Dashboard: React.FC = () => {
 					</h3>
 				</div>
 				<ContentGenerationForm />
-			</motion.div>
-
-			{/* Elai Video Generator */}
-			<motion.div className="mb-8" variants={itemVariants}>
-				<div className="flex items-center gap-3 mb-6">
-					<div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-						<Video className="w-5 h-5 text-white" />
-					</div>
-					<h3 className="text-xl font-bold text-gray-800">
-						AI Video Generator (Elai.io)
-					</h3>
-				</div>
-				<ElaiVideoCard />
 			</motion.div>
 
 			{/* Code Generator */}

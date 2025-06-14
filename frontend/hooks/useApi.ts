@@ -67,38 +67,8 @@ export const apiService = {
     return response.data;
   },
 
-  runTask: async (data: { inputs: { user_prompt: string; text: string; title: string } }) => {
-    const response = await axios.post('http://localhost:8000/run_task', data);
-    return response.data;
-  },
-
-  runVideoWorkflow: async (data: { user_prompt: string; title?: string }) => {
-    const response = await axios.post('http://localhost:8000/run_video_workflow', data);
-    return response.data;
-  },
-
   runAgent: async (agentId: string, data: { text: string }) => {
     const response = await axios.post(`http://localhost:8000/run/${agentId}`, data);
-    return response.data;
-  },
-
-  generateElaiVideo: async (data: {
-    text: string;
-    title?: string;
-    template_id?: string;
-    voice_id?: string;
-  }) => {
-    const response = await axios.post('http://localhost:8000/generate_elai_video', data);
-    return response.data;
-  },
-
-  generateVideo: async (data: {
-    text: string;
-    title?: string;
-    template_id?: string;
-    voice_id?: string;
-  }) => {
-    const response = await axios.post('http://localhost:8000/generate_video', data);
     return response.data;
   },
 
@@ -141,26 +111,6 @@ export const apiService = {
       `http://localhost:8000/api/research/analytics?days=${days}`,
       { headers: { Authorization: 'Bearer dummy-token' } }
     );
-    return response.data;
-  },
-
-  getElaiTemplates: async () => {
-    const response = await axios.get('http://localhost:8000/elai/templates');
-    return response.data;
-  },
-
-  getElaiVoices: async () => {
-    const response = await axios.get('http://localhost:8000/elai/voices');
-    return response.data;
-  },
-
-  getVideoTemplates: async () => {
-    const response = await axios.get('http://localhost:8000/video/templates');
-    return response.data;
-  },
-
-  getVideoVoices: async () => {
-    const response = await axios.get('http://localhost:8000/video/voices');
     return response.data;
   },
 

@@ -1,6 +1,6 @@
 # AI Content Studio - Multi-Agent Content Generation Platform
 
-A comprehensive AI-powered content generation platform with research capabilities, code generation, and video creation using Elai.io.
+A comprehensive AI-powered content generation platform with research capabilities and code generation.
 
 ## Features
 
@@ -8,7 +8,6 @@ A comprehensive AI-powered content generation platform with research capabilitie
 - **Multi-Agent Workflow System** - Coordinated AI agents for content creation
 - **Research & Data Agent** - Real-time research across academic, web, and statistical sources
 - **Code Generator** - AI-powered code generation in multiple programming languages
-- **Video Generation** - Professional AI video creation using Elai.io API
 - **Content Pipeline** - End-to-end content creation from strategy to publishing
 
 ### Frontend Components
@@ -24,7 +23,6 @@ A comprehensive AI-powered content generation platform with research capabilitie
 - **Agent-based architecture** for modular AI workflows
 - **SQLite database** for research caching and data storage
 - **OpenAI API** integration for intelligent content generation
-- **Elai.io API** integration for professional video creation
 - **Async/await** for concurrent request handling
 
 ## Technical Stack
@@ -40,7 +38,6 @@ A comprehensive AI-powered content generation platform with research capabilitie
 ### Backend
 - **FastAPI** with Python 3.9+
 - **OpenAI API** for content generation
-- **Elai.io API** for video creation
 - **SQLite** for data storage
 - **Async/await** for performance
 - **Pydantic** for data validation
@@ -58,7 +55,6 @@ pip install -r requirements.txt
 ```bash
 # Create .env file
 OPENAI_API_KEY=your_openai_api_key_here
-ELAI_API_KEY=your_elai_api_key_here
 ```
 
 3. Start the backend server:
@@ -88,11 +84,9 @@ The frontend will be available at `http://localhost:5173`
 ### Core Endpoints
 
 - `POST /run_workflow` - Execute multi-agent content workflow
-- `POST /run_video_workflow` - Execute script generation + video creation
-- `POST /generate_elai_video` - Direct Elai.io video generation
 - `POST /generate_code` - AI code generation
-- `GET /elai/templates` - Get available video templates
-- `GET /elai/voices` - Get available video voices
+- `GET /code/templates` - Get available code templates
+- `GET /code/history` - Get code generation history
 
 ### Research Endpoints
 
@@ -101,17 +95,6 @@ The frontend will be available at `http://localhost:5173`
 - `GET /api/research/sources` - Available data sources
 
 ## Usage Examples
-
-### Video Generation
-
-```typescript
-const videoResult = await apiService.generateElaiVideo({
-  text: "Welcome to our AI platform that transforms business operations",
-  title: "AI Platform Demo",
-  template_id: "professional",
-  voice_id: "en-US-1"
-});
-```
 
 ### Code Generation
 
@@ -145,8 +128,6 @@ const searchResults = await apiService.searchResearch({
 - **Creative Writer** - Generates engaging content
 - **Quality Control** - Reviews and improves content
 - **Publishing Agent** - Formats and distributes content
-- **Script Generator** - Creates video scripts
-- **Elai Video Agent** - Generates professional videos
 - **Code Generator** - Creates clean, documented code
 
 ### Security Features
@@ -168,7 +149,6 @@ const searchResults = await apiService.searchResearch({
 ```bash
 # Production environment
 OPENAI_API_KEY=your_production_openai_key
-ELAI_API_KEY=your_production_elai_key
 DATABASE_URL=your_database_url
 JWT_SECRET_KEY=your_jwt_secret
 CORS_ORIGINS=https://yourdomain.com
