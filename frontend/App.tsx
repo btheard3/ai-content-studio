@@ -11,6 +11,8 @@ import CodePage from "./pages/CodePage";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { AgentProvider } from "./context/AgentContext";
 
+console.log("🔍 API Base URL = ", import.meta.env.VITE_API_BASE_URL);
+
 const App: React.FC = () => {
 	return (
 		<ErrorBoundary>
