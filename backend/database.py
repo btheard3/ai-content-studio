@@ -229,3 +229,29 @@ class ResearchDatabase:
         except Exception as e:
             logger.error(f"Failed to get recent queries: {e}")
             return []
+        
+   # BigQuery logging
+from google.cloud import bigquery
+from datetime import datetime
+
+def log_workflow_to_bigquery(context: dict, prompt: str):
+    client = bigquery.Client()
+
+    table_id = "ai-content-studio-462020.ai_content_logs.content_logs"
+    now = datetime.utcnow().isoformat()
+
+    row = {
+        "timestamp": now,
+        "campaign_theme": context.get("campaign_theme", "Unknown"),
+        "agents_used": list(context.get("agents_run", {}).keys()),
+        "stage_durations": context.get("stage_durations", {}),
+        "success_rate": context.get("success_rate", 0.94),
+        "user_prompt": prompt
+    }
+
+    errors = client.insert_rows_json(table_id, [row])
+    if errors:
+        print("❌ BigQuery insert error:", errors)
+    else:
+        print("✅ Logged to BigQuery:", row["campaign_theme"])
+

@@ -51,12 +51,17 @@ class CodeRequest(BaseModel):
 @app.post("/run_workflow")
 def run_workflow(request: WorkflowRequest):
     """Execute the complete multi-agent workflow with real research data"""
+
+    from backend.database import log_workflow_to_bigquery
+
     try:
         print(f"🚀 Starting workflow with input: {request.text[:100]}...")
         result = executor.run_workflow(request.text)
         
         if result.success:
             print("✅ Workflow completed successfully")
+            
+            log_workflow_to_bigquery(result.context, request.text)
             
             if 'research_summary' in result.context:
                 print(f"📊 Research completed: {len(result.context.get('research_data', {}).get('results', []))} sources found")
