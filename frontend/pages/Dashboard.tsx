@@ -17,10 +17,15 @@ import CodeGeneratorCard from "../components/CodeGeneratorCard";
 import CreativeWriterCard from "../components/CreativeWriterCard";
 import QualityControlCard from "../components/QualityControlCard";
 import PublishingCard from "../components/PublishingCard";
+import WorkflowVisualizer from "../components/WorkflowVisualizer";
 import { useAgents } from "../context/AgentContext";
-import { QualityControlOutput, PublishingOutput } from "../types";
+import {
+	QualityControlOutput,
+	PublishingOutput,
+	WorkflowStage,
+} from "../types";
 
-// Type guard functions
+// Type guards
 function isQualityControlOutput(obj: any): obj is QualityControlOutput {
 	return (
 		obj &&
@@ -42,14 +47,10 @@ function isPublishingOutput(obj: any): obj is PublishingOutput {
 	);
 }
 
-// Safe JSON parser for agent outputs
+// Safe parser
 function safeParseAgentOutput(output: any, fallback: any = {}) {
 	if (!output) return fallback;
-
-	// If it's already an object, return it
 	if (typeof output === "object") return output;
-
-	// If it's a string, try to parse it
 	if (typeof output === "string") {
 		try {
 			return JSON.parse(output);
@@ -58,34 +59,36 @@ function safeParseAgentOutput(output: any, fallback: any = {}) {
 			return { error: "Invalid output format", raw_output: output };
 		}
 	}
-
 	return fallback;
 }
 
 const Dashboard: React.FC = () => {
-	const { agents, activeWorkflows, completedItems } = useAgents();
+	const { agents, activeWorkflows, completedItems, contentItems } = useAgents();
 
-	// Extract outputs and parse JSON safely with proper typing
+	const latestItem = contentItems[contentItems.length - 1];
+	const currentStage: WorkflowStage =
+		latestItem?.stage || WorkflowStage.PLANNING;
+
+	const handleStageClick = (stage: WorkflowStage) => {
+		console.log("Clicked stage:", stage);
+		// You can hook this into state or routing here
+	};
+
+	// Outputs
 	let qualityControlOutput: QualityControlOutput | null = null;
 	let publishingOutput: PublishingOutput | null = null;
 
 	const qualityAgent = agents.find((a) => a.id === "quality_control");
 	const publishingAgent = agents.find((a) => a.id === "publishing_agent");
 
-	// Handle quality control output
 	if (qualityAgent?.output) {
 		const parsed = safeParseAgentOutput(qualityAgent.output);
-		if (isQualityControlOutput(parsed)) {
-			qualityControlOutput = parsed;
-		}
+		if (isQualityControlOutput(parsed)) qualityControlOutput = parsed;
 	}
 
-	// Handle publishing output
 	if (publishingAgent?.output) {
 		const parsed = safeParseAgentOutput(publishingAgent.output);
-		if (isPublishingOutput(parsed)) {
-			publishingOutput = parsed;
-		}
+		if (isPublishingOutput(parsed)) publishingOutput = parsed;
 	}
 
 	const kpiCards = [
@@ -155,7 +158,8 @@ const Dashboard: React.FC = () => {
 						AI Content Studio Dashboard
 					</h2>
 					<p className="text-gray-600">
-						Multi-Agent Content Generation Platform with Research & Code Generation
+						Multi-Agent Content Generation Platform with Research & Code
+						Generation
 					</p>
 				</div>
 				<motion.div
@@ -205,6 +209,14 @@ const Dashboard: React.FC = () => {
 				))}
 			</motion.div>
 
+			{/* 🧠 Interactive Workflow Timeline */}
+			<motion.div className="mb-12" variants={itemVariants}>
+				<WorkflowVisualizer
+					activeStage={currentStage}
+					onStageClick={handleStageClick}
+				/>
+			</motion.div>
+
 			{/* Content Generator */}
 			<motion.div className="mb-8" variants={itemVariants}>
 				<div className="flex items-center gap-3 mb-6">
@@ -242,7 +254,7 @@ const Dashboard: React.FC = () => {
 				<ResearchDataCard />
 			</motion.div>
 
-			{/* Quality Control Card - Only render if we have valid output */}
+			{/* Quality Control Results */}
 			{qualityControlOutput && (
 				<motion.div className="mb-8" variants={itemVariants}>
 					<div className="flex items-center gap-3 mb-4">
@@ -253,15 +265,11 @@ const Dashboard: React.FC = () => {
 							Quality Control Results
 						</h3>
 					</div>
-					<QualityControlCard
-						quality_score={qualityControlOutput.quality_score}
-						final_content={qualityControlOutput.final_content}
-						improvements_made={qualityControlOutput.improvements_made}
-					/>
+					<QualityControlCard {...qualityControlOutput} />
 				</motion.div>
 			)}
 
-			{/* Publishing Summary Card - Only render if we have valid output */}
+			{/* Publishing Summary */}
 			{publishingOutput && (
 				<motion.div className="mb-8" variants={itemVariants}>
 					<div className="flex items-center gap-3 mb-4">
@@ -272,11 +280,7 @@ const Dashboard: React.FC = () => {
 							Publishing Summary
 						</h3>
 					</div>
-					<PublishingCard
-						published_status={publishingOutput.published_status}
-						distribution_channels={publishingOutput.distribution_channels}
-						publication_metadata={publishingOutput.publication_metadata}
-					/>
+					<PublishingCard {...publishingOutput} />
 				</motion.div>
 			)}
 		</motion.div>
