@@ -1,6 +1,5 @@
 node_modules
 .git
-.env
 .vscode
 dist
 npm-debug.log

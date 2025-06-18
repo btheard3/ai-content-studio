@@ -24,3 +24,4 @@ node_modules/
 
 research_data.db
 .env
+frontend/.env
