@@ -12,6 +12,7 @@ load_dotenv()
 
 from backend.executor import AgentExecutor
 from backend.research_api import router as research_router
+from fastapi.middleware.cors import CORSMiddleware
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -342,6 +343,14 @@ def read_root():
             "test_code": "/test/code"
         }
     }
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # or just your frontend URL for stricter security
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
