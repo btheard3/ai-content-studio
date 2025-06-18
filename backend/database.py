@@ -233,6 +233,7 @@ class ResearchDatabase:
    # BigQuery logging
 from google.cloud import bigquery
 from datetime import datetime
+import json
 
 def log_workflow_to_bigquery(context: dict, prompt: str):
     client = bigquery.Client()
@@ -240,11 +241,21 @@ def log_workflow_to_bigquery(context: dict, prompt: str):
     table_id = "ai-content-studio-462020.ai_content_logs.content_logs"
     now = datetime.utcnow().isoformat()
 
+    # Extract durations individually for RECORD fields
+    durations = context.get("stage_durations", {})
+    stage_record = {
+        "planning": durations.get("planning", 0),
+        "research": durations.get("research", 0),
+        "writing": durations.get("writing", 0),
+        "review": durations.get("review", 0),
+        "publishing": durations.get("publishing", 0)
+    }
+
     row = {
         "timestamp": now,
-        "campaign_theme": context.get("campaign_theme", "Unknown"),
+        "campaign_theme": context.get("campaign_theme") or "Unknown",
         "agents_used": list(context.get("agents_run", {}).keys()),
-        "stage_durations": context.get("stage_durations", {}),
+        "stage_durations": stage_record,
         "success_rate": context.get("success_rate", 0.94),
         "user_prompt": prompt
     }
@@ -254,4 +265,6 @@ def log_workflow_to_bigquery(context: dict, prompt: str):
         print("❌ BigQuery insert error:", errors)
     else:
         print("✅ Logged to BigQuery:", row["campaign_theme"])
+
+
 

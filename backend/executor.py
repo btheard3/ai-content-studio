@@ -3,6 +3,7 @@ import traceback
 from typing import Dict, Any, List
 from backend.agent_base import AgentInput, BaseAgent, AgentOutput
 from importlib import import_module
+from time import time
 
 class WorkflowResult:
     def __init__(self, success: bool, context: Dict[str, Any], error: str = None):
@@ -80,6 +81,9 @@ class AgentExecutor:
         """Execute the complete workflow with all agents in sequence"""
         context = {"text": initial_input}
         stages_completed = []
+        context["agents_run"] = {}
+        context["stage_durations"] = {}
+
         
         try:
             workflow_stages = self.workflow.get("stages", [])
@@ -102,8 +106,20 @@ class AgentExecutor:
                 agent_instance.status = "processing"
                 
                 try:
-                    # Execute the agent
+                    # Execute the agent                    ...
+                    start_time = time()
                     agent_output = agent_instance.run(agent_input)
+                    duration = round(time() - start_time, 2)
+
+                    # Track stage duration
+                    context["stage_durations"][agent_id] = duration
+
+                    # Save agent's result
+                    context["agents_run"][agent_id] = {
+                    "status": "completed",
+                    "output": agent_output.data  # or use `.to_json()` if more appropriate
+}
+            
                     agent_instance.status = "completed"
                     
                     # Update context with agent's output
