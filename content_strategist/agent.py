@@ -1,91 +1,66 @@
 import os
-from dotenv import load_dotenv
-from openai import OpenAI
+import re
 from backend.agent_base import BaseAgent, AgentInput, AgentOutput
+from openai import OpenAI
 
-load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 class ContentStrategistAgent(BaseAgent):
     def __init__(self):
         super().__init__()
-        self.name = "Content Strategist"
-
-    def get_input_keys(self) -> list:
-        return ["text"]
-
-    def get_output_keys(self) -> list:
-        return ["content_roadmap", "campaign_theme", "key_pillars"]
 
     def run(self, input_data: AgentInput) -> AgentOutput:
-        try:
-            user_input = input_data.get("text", "")
-            
-            prompt = f"""
-You are an expert content strategist. Based on the following input, generate a detailed content strategy including:
+        user_input = input_data.text.strip()
 
-1. Campaign Theme: A compelling overarching theme
-2. Key Message Pillars: 3-4 core message pillars
-3. Content Roadmap: A structured 4-week content plan
+        system_prompt = (
+            "You are a content strategist. Based on the following input, generate a detailed content strategy including:\n"
+            "1. Campaign Theme: a short overarching theme\n"
+            "2. Key Pillars: 3-5 themes for supporting blog articles\n"
+            "3. Content Plan: a structured 4-week content plan\n\n"
+            "Please provide your response in a structured format that includes:\n"
+            "- Campaign Theme (1 sentence)\n"
+            "- Key Pillars (3–5 with labels)\n"
+            "- 4-week blog content calendar\n"
+            "- Social media distribution strategy\n"
+            "- Bonus AI-driven idea if relevant\n\n"
+            "Be specific and actionable in your recommendations."
+        )
 
-Input: "{user_input}"
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"I'm a senior content strategist. Provide a strategy for: {user_input}"}
+            ],
+            temperature=0.7,
+            max_tokens=900,
+        )
 
-Please provide your response in a structured format that includes:
-- A clear campaign theme
-- Specific key message pillars
-- A detailed weekly content roadmap
-- Content formats and distribution strategy
+        message = response.choices[0].message.content
 
-Be specific and actionable in your recommendations.
-"""
+        # Extract campaign theme using regex
+        match = re.search(r"(?i)Campaign Theme\s*[:\-–]\s*(.+)", message)
+        campaign_theme = match.group(1).strip() if match else "Unknown"
 
-            response = client.chat.completions.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "system", "content": "You are a senior content strategist specializing in impactful campaign planning. Provide structured, actionable strategies."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.8,
-                max_tokens=1000,
-            )
-
-            content = response.choices[0].message.content
-            
-            # Extract structured information from the response
-            lines = content.split('\n')
-            campaign_theme = "Strategic Content Campaign"
-            key_pillars = ["Engagement", "Authority", "Conversion", "Community"]
-            
-            # Try to extract theme and pillars from the response
-            for i, line in enumerate(lines):
-                if "theme" in line.lower() and ":" in line:
-                    campaign_theme = line.split(":", 1)[1].strip()
-                elif "pillar" in line.lower() and i < len(lines) - 3:
-                    # Extract next few lines as pillars
-                    pillars = []
-                    for j in range(i, min(i + 5, len(lines))):
-                        if lines[j].strip() and not "pillar" in lines[j].lower():
-                            pillar = lines[j].strip().lstrip("- ").lstrip("1234567890. ")
-                            if pillar and len(pillar) < 100:
-                                pillars.append(pillar)
-                    if pillars:
-                        key_pillars = pillars[:4]
+        # Extract key pillars (rough heuristic based on common formats)
+        lines = message.splitlines()
+        my_pillars = []
+        capture = False
+        for line in lines:
+            if "Key Pillars" in line:
+                capture = True
+                continue
+            if capture:
+                if line.strip() == "" or re.match(r"^\d+\.", line):  # stop at empty or next section
                     break
+                if "-" in line:
+                    parts = line.strip("- ").split(":", 1)
+                    label = parts[0].strip()
+                    description = parts[1].strip() if len(parts) > 1 else ""
+                    my_pillars.append({"label": label, "description": description})
 
-            return AgentOutput.from_dict({
-                "content_roadmap": content,
-                "campaign_theme": campaign_theme,
-                "key_pillars": key_pillars,
-                "status": "completed",
-                "agent": "Content Strategist"
-            })
-
-        except Exception as e:
-            return AgentOutput.from_dict({
-                "content_roadmap": f"[ERROR] Content strategy generation failed: {str(e)}",
-                "campaign_theme": "Error in Strategy",
-                "key_pillars": ["Error"],
-                "status": "error",
-                "agent": "Content Strategist",
-                "error": str(e)
-            })
+        return AgentOutput.from_dict({
+            "campaign_theme": campaign_theme,
+            "my_pillars": my_pillars,
+            "stage_name": "Content Strategist"
+        })
