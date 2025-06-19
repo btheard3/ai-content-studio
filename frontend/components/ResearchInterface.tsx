@@ -127,7 +127,10 @@ const ResearchInterface: React.FC = () => {
 
 	const performSearch = async () => {
 		if (!query.trim()) return;
-
+		console.log(
+			"Calling:",
+			`${import.meta.env.VITE_API_BASE_URL}/run_workflow`
+		);
 		setLoading(true);
 		setError("");
 		setShowSuggestions(false);
