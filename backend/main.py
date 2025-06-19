@@ -352,5 +352,33 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from backend.research_service import ResearchService
+from fastapi import Request
+from pydantic import BaseModel
+
+class ResearchQuery(BaseModel):
+    query: str
+
+@app.post("/search")
+async def search_api(query: ResearchQuery):
+    try:
+        async with ResearchService() as service:
+            results = await service.search(
+                query=query.query,
+                filters={"sources": ["academic", "web"], "min_relevance": 0.3}
+            )
+            return {
+                "success": True,
+                "results": results.get("results", []),
+                "sources": results.get("sources_searched", []),
+                "total_results": results.get("total_results", 0)
+            }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
