@@ -29,14 +29,41 @@
 
 ## 🏗 Architecture
 
-graph TD
-A[📝 User Prompt] --> B[🧠 Agent Executor (ADK)]
-B --> C[🎯 Content Strategist Agent]
-C --> D[🔍 Research & Data Agent]
-D --> E[✍️ Creative Writer Agent]
-E --> F[✅ Quality Control Agent]
-F --> G[📤 Publishing Agent]
-G --> H[📊 BigQuery Logging]
+User (Browser)
+|
+v
+[Frontend (React + Tailwind)]
+|
+| /run_workflow (REST)
+v
+[Cloud Run Backend (FastAPI)]
+|
+v
+[AgentExecutor (ADK)]
+|
++--> content_strategist
+| |
+| +--> OpenAI GPT-4
+|
++--> research_data
+| |
+| +--> arXiv, Wikipedia, Google News
+|
++--> creative_writer
+| |
+| +--> OpenAI GPT-4
+|
++--> quality_control
+| |
+| +--> GPT-4 Scoring
+|
++--> publishing_agent
+|
++--> UI + BigQuery Log
+
+[BigQuery] <--- Logs & metrics
+[Secret Manager] --> OPENAI_API_KEY
+Logging]
 G --> I[💻 Frontend UI (Vite + Tailwind)]
 B -->|🔁 Context Flow| B
 
