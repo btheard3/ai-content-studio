@@ -1,170 +1,78 @@
-# AI Content Studio - Multi-Agent Content Generation Platform
+# AI Content Studio
 
-A comprehensive AI-powered content generation platform with research capabilities and code generation.
+🚀 A fully orchestrated multi-agent AI content creation system built with Google Cloud's Agent Development Kit (ADK), OpenAI, and BigQuery.
 
-## Features
+### 🌐 Live Demo
 
-### Core Components
-- **Multi-Agent Workflow System** - Coordinated AI agents for content creation
-- **Research & Data Agent** - Real-time research across academic, web, and statistical sources
-- **Code Generator** - AI-powered code generation in multiple programming languages
-- **Content Pipeline** - End-to-end content creation from strategy to publishing
+- Frontend: https://ai-content-frontend-48545302633.us-central1.run.app/
+- Backend: https://ai-content-backend-48545302633.us-central1.run.app/
 
-### Frontend Components
-- **React 18** with TypeScript for type safety
-- **Framer Motion** for smooth animations and transitions
-- **Tailwind CSS** for responsive styling
-- **Real-time search suggestions** with debounced API calls
-- **Advanced filtering system** for data sources and content types
-- **Responsive design** optimized for all device sizes
+---
 
-### Backend Components
-- **FastAPI** for high-performance API development
-- **Agent-based architecture** for modular AI workflows
-- **SQLite database** for research caching and data storage
-- **OpenAI API** integration for intelligent content generation
-- **Async/await** for concurrent request handling
+## 🧠 Overview
 
-## Technical Stack
+**AI Content Studio** enables users to generate complete, high-quality marketing campaigns using multi-agent orchestration. It combines the power of AI agents, research, tone analysis, creativity, and quality control to generate polished, deployable content — all in one click.
 
-### Frontend
-- **React 18** with TypeScript
-- **Framer Motion** for animations
-- **Tailwind CSS** for styling
-- **Axios** for API communication
-- **Recharts** for data visualization
-- **Lucide React** for icons
+---
 
-### Backend
-- **FastAPI** with Python 3.9+
-- **OpenAI API** for content generation
-- **SQLite** for data storage
-- **Async/await** for performance
-- **Pydantic** for data validation
+## 🧩 Key Features
 
-## Installation & Setup
+- ✨ Multi-agent orchestration using **Google's Agent Development Kit**
+- 🧠 LLM-enhanced agents for ideation, writing, editing, and publishing
+- 🔍 Real-time research from arXiv, Wikipedia, Google News, World Bank, PubMed
+- 📊 BigQuery logging for analytics
+- 🎯 AI-assisted campaign theme ideation
+- 📜 Full creative writing pipeline with tone/style analysis
+- ✅ Final content validated via a quality control agent
 
-### Backend Setup
+---
 
-1. Install Python dependencies:
+## 🏗 Architecture
+
+graph TD
+A[📝 User Prompt] --> B[🧠 Agent Executor (ADK)]
+B --> C[🎯 Content Strategist Agent]
+C --> D[🔍 Research & Data Agent]
+D --> E[✍️ Creative Writer Agent]
+E --> F[✅ Quality Control Agent]
+F --> G[📤 Publishing Agent]
+G --> H[📊 BigQuery Logging]
+G --> I[💻 Frontend UI (Vite + Tailwind)]
+B -->|🔁 Context Flow| B
+
+---
+
+## ⚙️ Tech Stack
+
+- **Frontend**: Vite + React + Tailwind + Framer Motion
+- **Backend**: FastAPI + Google Cloud Run
+- **Orchestration**: Google Cloud ADK (Python)
+- **LLM**: OpenAI (gpt-4o)
+- **External Data**: Wikipedia, arXiv, PubMed, World Bank, Google News
+- **Database**: Supabase + SQLite
+- **Analytics**: BigQuery
+
+---
+
+## 🛠 How to Run Locally
+
+### 🔧 Prerequisites
+
+- Python 3.9+
+- Node.js 18+
+- Google Cloud CLI (for deployment)
+- `openai` Python SDK + Google Cloud credentials
+
+### 📦 Backend
+
 ```bash
+cd backend
 pip install -r requirements.txt
+PYTHONPATH=. python3 main.py
+
+
 ```
 
-2. Set up environment variables:
-```bash
-# Create .env file
-OPENAI_API_KEY=your_openai_api_key_here
-```
-
-3. Start the backend server:
-```bash
-python backend/main.py
-```
-
-The backend will be available at `http://localhost:8000`
-
-### Frontend Setup
-
-1. Install Node.js dependencies:
-```bash
 cd frontend
 npm install
-```
-
-2. Start the development server:
-```bash
 npm run dev
-```
-
-The frontend will be available at `http://localhost:5173`
-
-## API Documentation
-
-### Core Endpoints
-
-- `POST /run_workflow` - Execute multi-agent content workflow
-- `POST /generate_code` - AI code generation
-- `GET /code/templates` - Get available code templates
-- `GET /code/history` - Get code generation history
-
-### Research Endpoints
-
-- `POST /api/research/search` - Comprehensive research search
-- `GET /api/research/analytics` - Usage analytics
-- `GET /api/research/sources` - Available data sources
-
-## Usage Examples
-
-### Code Generation
-
-```typescript
-const codeResult = await apiService.generateCode({
-  description: "REST API for task management with authentication",
-  language: "python",
-  framework: "fastapi",
-  complexity: "medium",
-  include_tests: true
-});
-```
-
-### Research Search
-
-```typescript
-const searchResults = await apiService.searchResearch({
-  query: 'AI applications in healthcare',
-  filters: {
-    sources: ['academic', 'web'],
-    min_relevance: 0.7
-  }
-});
-```
-
-## Architecture
-
-### Agent System
-- **Content Strategist** - Plans content strategy and themes
-- **Research Agent** - Gathers data from multiple sources
-- **Creative Writer** - Generates engaging content
-- **Quality Control** - Reviews and improves content
-- **Publishing Agent** - Formats and distributes content
-- **Code Generator** - Creates clean, documented code
-
-### Security Features
-- **JWT Authentication** for API access
-- **Rate limiting** to prevent abuse
-- **Input validation** with Pydantic models
-- **CORS configuration** for secure cross-origin requests
-
-### Performance Optimizations
-- **Async/await** for concurrent processing
-- **Database caching** with expiration
-- **Debounced search suggestions**
-- **Paginated results** for large datasets
-
-## Deployment
-
-### Environment Variables
-
-```bash
-# Production environment
-OPENAI_API_KEY=your_production_openai_key
-DATABASE_URL=your_database_url
-JWT_SECRET_KEY=your_jwt_secret
-CORS_ORIGINS=https://yourdomain.com
-```
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes with proper tests
-4. Submit a pull request
-
-## License
-
-MIT License - see LICENSE file for details.
-
-## Support
-
-For support and questions, please open an issue in the GitHub repository.
