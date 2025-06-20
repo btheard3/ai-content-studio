@@ -127,28 +127,27 @@ const ResearchInterface: React.FC = () => {
 
 	const performSearch = async () => {
 		if (!query.trim()) return;
-		console.log(
-			"Calling:",
-			`${import.meta.env.VITE_API_BASE_URL}/run_workflow`
-		);
+
 		setLoading(true);
 		setError("");
 		setShowSuggestions(false);
 
 		try {
 			const response = await axios.post(
-				`${import.meta.env.VITE_API_BASE_URL}/run_workflow`,
+				`${import.meta.env.VITE_API_BASE_URL}/api/research/search`,
 				{
-					input: {
-						query: query.trim(),
-						filters: filters,
-						user_id: "user123",
+					query: query.trim(),
+					filters: filters,
+					user_id: "user123",
+				},
+				{
+					headers: {
+						Authorization: "Bearer dummy-token",
 					},
-					agent: "research_data",
 				}
 			);
 
-			const output = response.data?.output;
+			const output = response.data?.data;
 
 			if (!output || !output.results || output.results.length === 0) {
 				setError("No results returned.");
