@@ -103,7 +103,7 @@ const ResearchInterface: React.FC = () => {
 
 		try {
 			const response = await axios.get(
-				`http://localhost:8000/api/research/suggestions`,
+				"https://ai-content-backend-48545302633.us-central1.run.app/api/research/suggestions",
 				{
 					params: { q: searchQuery },
 					headers: { Authorization: "Bearer dummy-token" },
@@ -128,13 +128,15 @@ const ResearchInterface: React.FC = () => {
 	const performSearch = async () => {
 		if (!query.trim()) return;
 
+		console.log("Calling Cloud Run search endpoint...");
+
 		setLoading(true);
 		setError("");
 		setShowSuggestions(false);
 
 		try {
 			const response = await axios.post(
-				`${import.meta.env.VITE_API_BASE_URL}/api/research/search`,
+				"https://ai-content-backend-48545302633.us-central1.run.app/api/research/search",
 				{
 					query: query.trim(),
 					filters: filters,
