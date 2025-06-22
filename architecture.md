@@ -1,4 +1,6 @@
-# 🧱 AI Content Studio Architecture
+# 🏗️ AI Content Studio – Architecture Overview
+
+AI Content Studio is a cloud-native, multi-agent AI platform that automates the full content creation lifecycle. It is powered by the **Agent Development Kit (ADK)**, **OpenAI**, and **Google Cloud**.
 
 ```ascii
                         +---------------------+
