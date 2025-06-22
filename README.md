@@ -49,12 +49,24 @@ PYTHONPATH=. python3 backend/main.py
 
 ```
 
+# Start frontend
+
 For the frontend:
 cd frontend
 npm install
 npm run dev
 
 Make sure you’ve added your .env credentials (OpenAI keys, etc.)
+
+🧪 Local Run Instruction
+
+🔐 Environment Setup
+Create a .env file in the root directory with:
+
+env
+OPENAI_API_KEY=your-openai-key
+PROJECT_ID=your-gcp-project-id
+GCP_REGION=your-region
 
 📊 Live Demo
 🌐 https://ai-content-frontend-48545302633.us-central1.run.app/
